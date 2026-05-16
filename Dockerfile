@@ -48,7 +48,6 @@ RUN pip install --no-cache-dir *.whl && rm *.whl
 
 # Copy application code
 COPY app/ ./app/
-COPY data/ ./data/
 
 # Create directories and set permissions
 RUN mkdir -p data/uploads data/output data/config && \
