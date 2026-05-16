@@ -20,7 +20,10 @@ services:
       # Override config via environment variables
       - SPARKLE_NANOGPT__API_URL=${NANOGPT_API_URL:-https://api.nanogpt.com/v1}
       - SPARKLE_NANOGPT__API_KEY=${NANOGPT_API_KEY:-}
-      - SPARKLE_NANOGPT__MODEL=${NANOGPT_MODEL:-gpt-4o}
+      # Multi-model configuration
+      - SPARKLE_NANOGPT__VISION_MODEL__MODEL=${NANOGPT_VISION_MODEL:-gpt-4o}
+      - SPARKLE_NANOGPT__GENERATION_MODEL__MODEL=${NANOGPT_GENERATION_MODEL:-dall-e-3}
+      - SPARKLE_NANOGPT__USE_PROMPT_ENHANCEMENT=${USE_PROMPT_ENHANCEMENT:-true}
       - SPARKLE_UI__SERVER_NAME=0.0.0.0
       - SPARKLE_UI__SERVER_PORT=7860
     healthcheck:

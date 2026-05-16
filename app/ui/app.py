@@ -8,6 +8,7 @@ from typing import Optional
 import gradio as gr
 from PIL import Image
 
+from app.clients.dalle3 import Dalle3Client
 from app.clients.nanogpt import NanoGPTClient
 from app.config.manager import get_config, get_config_manager
 from app.config.models import AppConfig
@@ -37,10 +38,12 @@ PROCESSORS = {
 }
 
 
-def _get_client() -> NanoGPTClient:
-    """Create a NanoGPT client from current config."""
+def _get_clients() -> tuple[NanoGPTClient, Dalle3Client]:
+    """Create vision and generation clients from current config."""
     config = get_config()
-    return NanoGPTClient(config.nanogpt)
+    vision_client = NanoGPTClient(config.nanogpt)
+    generation_client = Dalle3Client(config.nanogpt)
+    return vision_client, generation_client
 
 
 async def _process_image(
@@ -54,12 +57,12 @@ async def _process_image(
         return Image.new("RGB", (1, 1)), "No image provided."
 
     config = get_config()
-    client = _get_client()
+    vision_client, generation_client = _get_clients()
     processor_cls = PROCESSORS.get(operation)
     if processor_cls is None:
         return image, f"Unknown operation: {operation}"
 
-    processor = processor_cls(client, config.processing)
+    processor = processor_cls(vision_client, generation_client, config.processing)
     face_detector = FaceDetector()
 
     # Pre-check faces
@@ -72,7 +75,8 @@ async def _process_image(
         logger.exception("Processing failed")
         return image, f"Error: {exc}"
     finally:
-        await client.close()
+        await vision_client.close()
+        await generation_client.close()
 
     if not result.success:
         return image, result.message
@@ -348,6 +352,7 @@ def create_app() -> gr.Blocks:
 
             # --- Settings Tab ---
             with gr.TabItem("Settings"):
+                gr.Markdown("### API Configuration")
                 with gr.Row():
                     api_url = gr.Textbox(
                         label="NanoGPT API URL",
@@ -358,10 +363,22 @@ def create_app() -> gr.Blocks:
                         value=config.nanogpt.api_key,
                         type="password",
                     )
-                    model = gr.Textbox(
-                        label="Model",
-                        value=config.nanogpt.model,
+                gr.Markdown("### Model Configuration")
+                with gr.Row():
+                    vision_model = gr.Textbox(
+                        label="Vision Model (Prompt Enhancement)",
+                        value=config.nanogpt.vision_model.model,
                     )
+                    generation_model = gr.Textbox(
+                        label="Generation Model (Image Output)",
+                        value=config.nanogpt.generation_model.model,
+                    )
+                with gr.Row():
+                    use_prompt_enhancement = gr.Checkbox(
+                        label="Use GPT-4o Prompt Enhancement",
+                        value=config.nanogpt.use_prompt_enhancement,
+                    )
+                gr.Markdown("### Processing Configuration")
                 with gr.Row():
                     max_res = gr.Slider(
                         label="Max Resolution",
@@ -387,11 +404,16 @@ def create_app() -> gr.Blocks:
                 save_settings_btn = gr.Button("Save Settings", variant="primary")
                 settings_status = gr.Textbox(label="Status", interactive=False)
 
-                def save_settings(url, key, mdl, res, fmt, exif, face):
+                def save_settings(
+                    url, key, vis_model, gen_model, prompt_enhance,
+                    res, fmt, exif, face
+                ):
                     cfg = get_config()
                     cfg.nanogpt.api_url = url
                     cfg.nanogpt.api_key = key
-                    cfg.nanogpt.model = mdl
+                    cfg.nanogpt.vision_model.model = vis_model
+                    cfg.nanogpt.generation_model.model = gen_model
+                    cfg.nanogpt.use_prompt_enhancement = prompt_enhance
                     cfg.processing.max_resolution = int(res)
                     cfg.processing.output_format = fmt
                     cfg.processing.preserve_exif = exif
@@ -401,7 +423,11 @@ def create_app() -> gr.Blocks:
 
                 save_settings_btn.click(
                     save_settings,
-                    inputs=[api_url, api_key, model, max_res, out_fmt, preserve_exif, face_preserve],
+                    inputs=[
+                        api_url, api_key, vision_model, generation_model,
+                        use_prompt_enhancement, max_res, out_fmt,
+                        preserve_exif, face_preserve,
+                    ],
                     outputs=settings_status,
                 )
 

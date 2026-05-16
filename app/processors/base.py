@@ -7,6 +7,7 @@ from typing import Optional
 
 from PIL import Image
 
+from app.clients.dalle3 import Dalle3Client
 from app.clients.nanogpt import NanoGPTClient
 from app.config.models import ProcessingConfig
 
@@ -26,10 +27,12 @@ class BaseProcessor(ABC):
 
     def __init__(
         self,
-        client: NanoGPTClient,
+        vision_client: NanoGPTClient,
+        generation_client: Dalle3Client,
         config: ProcessingConfig,
     ) -> None:
-        self.client = client
+        self.vision_client = vision_client
+        self.generation_client = generation_client
         self.config = config
 
     @property

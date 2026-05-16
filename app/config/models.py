@@ -5,6 +5,19 @@ from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+class ModelConfig(BaseModel):
+    """Configuration for a specific AI model."""
+
+    model: str = Field(
+        default="gpt-4o",
+        description="Model identifier",
+    )
+    enabled: bool = Field(
+        default=True,
+        description="Whether this model is enabled",
+    )
+
+
 class NanoGPTConfig(BaseModel):
     """NanoGPT API connection settings."""
 
@@ -15,10 +28,6 @@ class NanoGPTConfig(BaseModel):
     api_key: str = Field(
         default="",
         description="API key for NanoGPT authentication",
-    )
-    model: str = Field(
-        default="gpt-4o",
-        description="Model identifier to use for image operations",
     )
     timeout: int = Field(
         default=120,
@@ -31,6 +40,20 @@ class NanoGPTConfig(BaseModel):
         ge=0,
         le=10,
         description="Maximum number of retries on failure",
+    )
+
+    # Multi-model configuration
+    vision_model: ModelConfig = Field(
+        default_factory=lambda: ModelConfig(model="gpt-4o"),
+        description="Model for vision analysis and prompt enhancement",
+    )
+    generation_model: ModelConfig = Field(
+        default_factory=lambda: ModelConfig(model="dall-e-3"),
+        description="Model for image generation and editing",
+    )
+    use_prompt_enhancement: bool = Field(
+        default=True,
+        description="Use vision model to enhance prompts before generation",
     )
 
     @field_validator("api_url")

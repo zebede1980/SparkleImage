@@ -2,7 +2,17 @@
 
 AI Photo Repair, Recovery & Enhancement Tool
 
-SparkleImage is a containerized web application that connects to NanoGPT AI models to restore, colorize, enhance, and repair photographs. It runs on Linux ARM64 (Ampere) servers and provides an intuitive Gradio web interface.
+SparkleImage is a containerized web application that uses a **multi-model AI architecture** to restore, colorize, enhance, and repair photographs. It combines **GPT-4o** for vision analysis and prompt enhancement with **DALL-E 3** for high-quality image generation and editing. Runs on Linux ARM64 (Ampere) servers with an intuitive Gradio web interface.
+
+## Architecture
+
+```
+User Upload → GPT-4o (Vision Analysis) → Enhanced Prompt → DALL-E 3 (Image Generation) → Face Validation → Output
+```
+
+- **Vision Model (GPT-4o)**: Analyzes images, detects damage, and crafts precise editing prompts
+- **Generation Model (DALL-E 3)**: Performs the actual image editing, colorization, and restoration
+- **Face Preservation**: OpenCV DNN validation ensures people remain recognizable
 
 ## Features
 
@@ -26,7 +36,9 @@ SparkleImage is a containerized web application that connects to NanoGPT AI mode
    ```bash
    NANOGPT_API_KEY=your_api_key_here
    NANOGPT_API_URL=https://api.nanogpt.com/v1
-   NANOGPT_MODEL=gpt-4o
+   NANOGPT_VISION_MODEL=gpt-4o
+   NANOGPT_GENERATION_MODEL=dall-e-3
+   USE_PROMPT_ENHANCEMENT=true
    ```
 3. Build and run:
    ```bash
@@ -60,9 +72,15 @@ Settings are stored in `data/config.yaml` and can be edited via the **Settings**
 nanogpt:
   api_url: "https://api.nanogpt.com/v1"
   api_key: ""
-  model: "gpt-4o"
   timeout: 120
   max_retries: 3
+  vision_model:
+    model: "gpt-4o"
+    enabled: true
+  generation_model:
+    model: "dall-e-3"
+    enabled: true
+  use_prompt_enhancement: true
 processing:
   max_resolution: 2048
   output_format: "png"
@@ -85,7 +103,7 @@ ui:
 SparkleImage/
 ├── app/
 │   ├── config/          # Configuration models and YAML manager
-│   ├── clients/         # NanoGPT API client
+│   ├── clients/         # NanoGPT & DALL-E 3 API clients
 │   ├── processors/      # Image processing pipelines
 │   ├── utils/           # Face detection, prompts, helpers
 │   ├── ui/              # Gradio web interface
@@ -100,12 +118,30 @@ SparkleImage/
 └── README.md
 ```
 
+## Multi-Model Pipeline
+
+Each processing operation follows this flow:
+
+1. **Image Upload** — User uploads photo via Gradio interface
+2. **Vision Analysis** (Optional) — GPT-4o analyzes the image and enhances the editing prompt for better results
+3. **Image Generation** — DALL-E 3 receives the enhanced prompt and original image, performs the edit
+4. **Face Validation** — OpenCV DNN detects faces before/after, warns if identity is compromised
+5. **Output** — Result saved to gallery with EXIF preservation (if enabled)
+
 ## Face Preservation
 
 SparkleImage strongly preserves facial features by:
 1. Appending a strict face-preservation system prompt to every API request
 2. Detecting faces before and after processing with OpenCV DNN
 3. Warning the user if face count or detectability changes
+
+## Model Recommendations
+
+| Task | Recommended Model | Notes |
+|------|-------------------|-------|
+| Vision Analysis | GPT-4o | Best image understanding and prompt crafting |
+| Image Generation | DALL-E 3 | High-quality edits, colorization, inpainting |
+| Budget Option | GPT-4o-mini | Adequate for simple prompt enhancement |
 
 ## License
 
