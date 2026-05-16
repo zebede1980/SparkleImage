@@ -1,4 +1,4 @@
-"""DALL-E 3 image generation and editing client."""
+"""DALL-E image generation and editing client."""
 
 import base64
 import io
@@ -12,7 +12,7 @@ from app.clients.nanogpt import NanoGPTError
 
 
 class Dalle3Client:
-    """Client for DALL-E 3 image generation and editing via NanoGPT/OpenAI API."""
+    """Client for DALL-E image generation and editing via NanoGPT/OpenAI API."""
 
     def __init__(self, config: NanoGPTConfig) -> None:
         self.config = config
@@ -26,7 +26,6 @@ class Dalle3Client:
                 timeout=self.config.timeout,
                 headers={
                     "Authorization": f"Bearer {self.config.api_key}",
-                    "Content-Type": "application/json",
                 },
             )
         return self._client
@@ -89,6 +88,24 @@ class Dalle3Client:
         data = base64.b64decode(b64_string)
         return Image.open(io.BytesIO(data))
 
+    @staticmethod
+    def _image_to_bytes(image: Image.Image, fmt: str = "PNG") -> bytes:
+        """Convert a PIL Image to raw bytes."""
+        buffer = io.BytesIO()
+        image.save(buffer, format=fmt)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _make_square(image: Image.Image, size: int) -> Image.Image:
+        """Resize image to a square by fitting within size and padding with white."""
+        # Resize to fit within the square while maintaining aspect ratio
+        image.thumbnail((size, size), Image.LANCZOS)
+        # Create a white square canvas and paste the image centered
+        square = Image.new("RGB", (size, size), (255, 255, 255))
+        offset = ((size - image.width) // 2, (size - image.height) // 2)
+        square.paste(image, offset)
+        return square
+
     async def generate_image(
         self,
         prompt: str,
@@ -134,40 +151,48 @@ class Dalle3Client:
         an image and a mask. When no mask is provided we create a fully
         white mask so the entire image is editable.
 
+        The API expects multipart/form-data (not JSON) and requires square
+        PNG images under 4MB.
+
         Args:
             image: Input PIL Image.
             prompt: Edit instruction.
             mask: Optional mask image (white = edit, black = keep).
-            size: Output size.
+            size: Output size (must be 256x256, 512x512, or 1024x1024).
 
         Returns:
             Edited PIL Image.
         """
-        # Convert images to RGB if needed
+        # Parse target dimension from size string (e.g. "1024x1024" -> 1024)
+        target_dim = int(size.split("x")[0])
+
+        # Convert to RGB and resize to a square — DALL-E 2 requires this
         if image.mode != "RGB":
             image = image.convert("RGB")
-
-        b64_image = self.image_to_base64(image, fmt="PNG")
+        image = self._make_square(image, target_dim)
 
         # DALL-E 2 edits endpoint requires a mask. If none provided,
         # create a white mask so the whole image can be edited.
         if mask is None:
-            mask = Image.new("RGB", image.size, (255, 255, 255))
-        elif mask.mode != "RGB":
-            mask = mask.convert("RGB")
+            mask = Image.new("RGB", (target_dim, target_dim), (255, 255, 255))
+        else:
+            if mask.mode != "RGB":
+                mask = mask.convert("RGB")
+            mask = self._make_square(mask, target_dim)
 
-        b64_mask = self.image_to_base64(mask, fmt="PNG")
-
-        payload: dict[str, Any] = {
-            "image": b64_image,
-            "mask": b64_mask,
+        # Build multipart/form-data payload — avoids base64 bloat and 413 errors
+        files = {
+            "image": ("image.png", self._image_to_bytes(image, "PNG"), "image/png"),
+            "mask": ("mask.png", self._image_to_bytes(mask, "PNG"), "image/png"),
+        }
+        data = {
             "prompt": prompt,
-            "n": 1,
+            "n": "1",
             "size": size,
             "response_format": "b64_json",
         }
 
-        response = await self._request("POST", "/images/edits", json=payload)
+        response = await self._request("POST", "/images/edits", files=files, data=data)
         b64_data = response["data"][0]["b64_json"]
         return self.base64_to_image(b64_data)
 
