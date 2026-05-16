@@ -97,11 +97,18 @@ class Dalle3Client:
 
     @staticmethod
     def _make_square(image: Image.Image, size: int) -> Image.Image:
-        """Resize image to a square by fitting within size and padding with white."""
+        """Resize image to a square by fitting within size and padding.
+
+        Preserves the image mode (RGB or RGBA) so masks keep transparency.
+        """
         # Resize to fit within the square while maintaining aspect ratio
         image.thumbnail((size, size), Image.LANCZOS)
-        # Create a white square canvas and paste the image centered
-        square = Image.new("RGB", (size, size), (255, 255, 255))
+        # Create a square canvas matching the image mode
+        if image.mode == "RGBA":
+            bg = (0, 0, 0, 0)
+        else:
+            bg = (255, 255, 255)
+        square = Image.new(image.mode, (size, size), bg)
         offset = ((size - image.width) // 2, (size - image.height) // 2)
         square.paste(image, offset)
         return square
@@ -172,12 +179,14 @@ class Dalle3Client:
         image = self._make_square(image, target_dim)
 
         # DALL-E 2 edits endpoint requires a mask. If none provided,
-        # create a white mask so the whole image can be edited.
+        # create a fully transparent mask so the whole image can be edited.
+        # Transparent areas (alpha=0) indicate where to edit; opaque areas
+        # indicate where to preserve the original image.
         if mask is None:
-            mask = Image.new("RGB", (target_dim, target_dim), (255, 255, 255))
+            mask = Image.new("RGBA", (target_dim, target_dim), (0, 0, 0, 0))
         else:
-            if mask.mode != "RGB":
-                mask = mask.convert("RGB")
+            if mask.mode != "RGBA":
+                mask = mask.convert("RGBA")
             mask = self._make_square(mask, target_dim)
 
         # Build multipart/form-data payload — avoids base64 bloat and 413 errors
