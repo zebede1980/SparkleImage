@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  sparkleimage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+    image: sparkleimage:latest
+    container_name: sparkleimage
+    restart: unless-stopped
+    ports:
+      - "7860:7860"
+    volumes:
+      - ./data/config:/app/data/config
+      - ./data/output:/app/data/output
+      - ./data/uploads:/app/data/uploads
+    environment:
+      # Override config via environment variables
+      - SPARKLE_NANOGPT__API_URL=${NANOGPT_API_URL:-https://api.nanogpt.com/v1}
+      - SPARKLE_NANOGPT__API_KEY=${NANOGPT_API_KEY:-}
+      - SPARKLE_NANOGPT__MODEL=${NANOGPT_MODEL:-gpt-4o}
+      - SPARKLE_UI__SERVER_NAME=0.0.0.0
+      - SPARKLE_UI__SERVER_PORT=7860
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
