@@ -179,20 +179,23 @@ class Dalle3Client:
         image = self._make_square(image, target_dim)
 
         # DALL-E 2 edits endpoint requires a mask. If none provided,
-        # create a fully transparent mask so the whole image can be edited.
-        # Transparent areas (alpha=0) indicate where to edit; opaque areas
-        # indicate where to preserve the original image.
+        # create an almost-transparent mask so the whole image can be edited.
+        # Transparent areas indicate where to edit; opaque areas indicate
+        # where to preserve the original image.
         if mask is None:
-            mask = Image.new("RGBA", (target_dim, target_dim), (0, 0, 0, 0))
+            # Alpha=1 (almost transparent) avoids "invalid_mask_image_format"
+            # errors that some APIs return for a fully transparent mask.
+            mask = Image.new("RGBA", (target_dim, target_dim), (0, 0, 0, 1))
         else:
             if mask.mode != "RGBA":
                 mask = mask.convert("RGBA")
             mask = self._make_square(mask, target_dim)
 
-        # Build multipart/form-data payload — avoids base64 bloat and 413 errors
+        # Build multipart/form-data payload — avoids base64 bloat and 413 errors.
+        # Use BytesIO so httpx treats each part as a proper file upload.
         files = {
-            "image": ("image.png", self._image_to_bytes(image, "PNG"), "image/png"),
-            "mask": ("mask.png", self._image_to_bytes(mask, "PNG"), "image/png"),
+            "image": ("image.png", io.BytesIO(self._image_to_bytes(image, "PNG")), "image/png"),
+            "mask": ("mask.png", io.BytesIO(self._image_to_bytes(mask, "PNG")), "image/png"),
         }
         data = {
             "prompt": prompt,
