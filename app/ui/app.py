@@ -255,11 +255,10 @@ def create_app() -> gr.Blocks:
             with gr.TabItem("Remove Object (Masked)"):
                 with gr.Row():
                     with gr.Column():
-                        mask_image = gr.Image(
+                        mask_image = gr.ImageEditor(
                             label="Upload Image & Draw Mask",
                             type="pil",
                             sources=["upload"],
-                            tool="sketch",
                         )
                         mask_obj_desc = gr.Textbox(
                             label="Description of object to remove",
@@ -273,10 +272,11 @@ def create_app() -> gr.Blocks:
                 async def on_mask_process(img_dict, desc):
                     if img_dict is None:
                         return Image.new("RGB", (1, 1)), "No image provided."
-                    # Gradio sketch returns dict with 'image' and 'mask'
+                    # Gradio ImageEditor returns dict with 'background' and 'layers'
                     if isinstance(img_dict, dict):
-                        img = img_dict["image"]
-                        mask = img_dict.get("mask")
+                        img = img_dict.get("background")
+                        layers = img_dict.get("layers", [])
+                        mask = layers[0] if layers else None
                     else:
                         img = img_dict
                         mask = None
