@@ -128,12 +128,11 @@ class Dalle3Client:
         mask: Optional[Image.Image] = None,
         size: str = "1024x1024",
     ) -> Image.Image:
-        """Edit an image using DALL-E 3 (inpainting/variation).
+        """Edit an image using DALL-E 2 edits endpoint.
 
-        Note: DALL-E 2 supports edits with mask; DALL-E 3 typically uses
-        generations with reference. This method sends the image and prompt
-        to the API. For true inpainting, a mask may be required depending
-        on API capabilities.
+        DALL-E 2 supports the /images/edits endpoint which requires both
+        an image and a mask. When no mask is provided we create a fully
+        white mask so the entire image is editable.
 
         Args:
             image: Input PIL Image.
@@ -150,30 +149,25 @@ class Dalle3Client:
 
         b64_image = self.image_to_base64(image, fmt="PNG")
 
+        # DALL-E 2 edits endpoint requires a mask. If none provided,
+        # create a white mask so the whole image can be edited.
+        if mask is None:
+            mask = Image.new("RGB", image.size, (255, 255, 255))
+        elif mask.mode != "RGB":
+            mask = mask.convert("RGB")
+
+        b64_mask = self.image_to_base64(mask, fmt="PNG")
+
         payload: dict[str, Any] = {
-            "model": self.config.generation_model.model,
+            "image": b64_image,
+            "mask": b64_mask,
             "prompt": prompt,
             "n": 1,
             "size": size,
             "response_format": "b64_json",
         }
 
-        # If mask is provided, include it (DALL-E 2 style edit endpoint)
-        if mask is not None:
-            if mask.mode != "RGB":
-                mask = mask.convert("RGB")
-            b64_mask = self.image_to_base64(mask, fmt="PNG")
-            payload["image"] = b64_image
-            payload["mask"] = b64_mask
-            endpoint = "/images/edits"
-        else:
-            # For DALL-E 3, we use the image as reference in prompt
-            # Some APIs support image_url in generations
-            payload["prompt"] = f"Edit this image: {prompt}"
-            # Try to use image reference if API supports it
-            endpoint = "/images/generations"
-
-        response = await self._request("POST", endpoint, json=payload)
+        response = await self._request("POST", "/images/edits", json=payload)
         b64_data = response["data"][0]["b64_json"]
         return self.base64_to_image(b64_data)
 
