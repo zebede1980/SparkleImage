@@ -53,7 +53,9 @@ COPY app/ ./app/
 RUN mkdir -p data/uploads data/output data/config && \
     chown -R sparkle:sparkle /app
 
-USER sparkle
+# NOTE: Running as root so bind-mounted host volumes (./data/output etc.)
+# are writable. For production, use named volumes or set host UID/GID.
+# USER sparkle
 
 # Expose Gradio port
 EXPOSE 7860
