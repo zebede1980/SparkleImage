@@ -171,25 +171,13 @@ class TestModelChecks:
         assert any("content-filtered" in n for n in result.notes)
 
 
-class TestFacePass:
-    @pytest.mark.asyncio
-    async def test_a_detected_face_gets_its_own_call(self, models, config):
-        api_config, processing = config
-        capture: dict = {}
-        client = client_returning(photo((1024, 1024)), capture)
-        async with client:
-            result = await run_operation(
-                client, get_operation("colorize"), photo((2000, 1500)),
-                models, api_config, processing, detector=OneFace(),
-            )
-        # One whole-image call plus one face call.
-        assert len(capture["calls"]) == 2
-        assert any("Face 1" in n for n in result.notes)
+class TestNoFacePass:
+    """Re-editing zoomed face crops made identity worse in 12 of 12 trials
+    (plans/redesign-2026-10.md), so a face in the photo must not trigger extra calls."""
 
     @pytest.mark.asyncio
-    async def test_face_pass_can_be_switched_off(self, models, config):
+    async def test_a_detected_face_gets_no_extra_call(self, models, config):
         api_config, processing = config
-        processing.face_crop_edit = False
         capture: dict = {}
         client = client_returning(photo((1024, 1024)), capture)
         async with client:
@@ -198,45 +186,6 @@ class TestFacePass:
                 models, api_config, processing, detector=OneFace(),
             )
         assert len(capture["calls"]) == 1
-
-    @pytest.mark.asyncio
-    async def test_operations_that_should_not_touch_faces_do_not(self, models, config):
-        api_config, processing = config
-        capture: dict = {}
-        client = client_returning(photo((200, 200)), capture)
-        mask = Image.new("L", (200, 200), 255)
-        async with client:
-            await run_operation(
-                client, get_operation("remove_object"), photo((200, 200)),
-                models, api_config, processing, params={"object_description": "x"},
-                mask=mask, detector=OneFace(),
-            )
-        assert len(capture["calls"]) == 1
-
-    @pytest.mark.asyncio
-    async def test_a_failing_face_call_does_not_lose_the_main_result(self, models, config):
-        api_config, processing = config
-        calls = {"n": 0}
-
-        def handler(request):
-            calls["n"] += 1
-            if calls["n"] == 1:
-                buf = io.BytesIO()
-                photo((1024, 1024)).save(buf, format="PNG")
-                import base64
-                return httpx.Response(200, json={"data": [{"b64_json": base64.b64encode(buf.getvalue()).decode()}]})
-            return httpx.Response(500, text="face call exploded")
-
-        client = ImageAPIClient("https://x/api/v1", "k", max_retries=0,
-                                transport=httpx.MockTransport(handler))
-        async with client:
-            result = await run_operation(
-                client, get_operation("colorize"), photo((2000, 1500)),
-                models, api_config, processing, detector=OneFace(),
-            )
-        assert result.success
-        assert result.image.size == (2000, 1500)
-        assert any("skipped" in n for n in result.notes)
 
 
 class TestInstructions:

@@ -70,19 +70,6 @@ class ProcessingConfig(BaseModel):
     preserve_exif: bool = Field(
         default=True, description="Carry EXIF metadata from the source into the output"
     )
-    face_crop_edit: bool = Field(
-        default=True,
-        description=(
-            "Edit faces as high-resolution crops and composite them back. "
-            "Small-in-frame faces are where generative edits destroy identity"
-        ),
-    )
-    face_padding: float = Field(
-        default=0.35,
-        ge=0.0,
-        le=1.5,
-        description="Context to include around a face crop, as a fraction of its size",
-    )
     composite_feather: int = Field(
         default=8,
         ge=0,
@@ -94,6 +81,51 @@ class ProcessingConfig(BaseModel):
         ge=1.0,
         le=100.0,
         description="Downscale sources larger than this before uploading",
+    )
+
+
+class ComfyConfig(BaseModel):
+    """The home PC's ComfyUI, reached through comfy-gateway."""
+
+    url: str = Field(default="", description="Gateway URL, e.g. https://comfy.example.com; empty disables local")
+    api_key: str = Field(default="", description="The gateway's X-API-Key")
+    edit_megapixels: float = Field(
+        default=1.5,
+        ge=0.5,
+        le=2.0,
+        description="Size Qwen-Image edits run at. ~25s at 1.5MP on 16GB; above 2MP it spills VRAM and takes minutes",
+    )
+    upscale_short_edge: int = Field(
+        default=2160, ge=512, le=4096, description="SeedVR2 output size, in pixels on the short side"
+    )
+    run_timeout: int = Field(default=600, ge=60, le=3600)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, v: str) -> str:
+        if v and not v.startswith(("http://", "https://")):
+            raise ValueError("ComfyUI URL must start with http:// or https://")
+        return v.rstrip("/")
+
+
+class RestoreConfig(BaseModel):
+    """How a restoration job builds its candidates."""
+
+    local_seeds: int = Field(
+        default=4,
+        ge=1,
+        le=12,
+        description="Local candidates per photo. Seeds vary identity as much as models do; ~25s each",
+    )
+    cloud_models: list[str] = Field(
+        default_factory=list,
+        description="nano-gpt models to add as extra candidates, e.g. seedream-v4.5 (a few pence each)",
+    )
+    face_swap_margin: float = Field(
+        default=0.02,
+        ge=0.0,
+        le=0.2,
+        description="A face is swapped in from another candidate only if it scores this much better",
     )
 
 
@@ -144,6 +176,8 @@ class AppConfig(BaseSettings):
 
     image: ImageAPIConfig = Field(default_factory=ImageAPIConfig)
     processing: ProcessingConfig = Field(default_factory=ProcessingConfig)
+    comfy: ComfyConfig = Field(default_factory=ComfyConfig)
+    restore: RestoreConfig = Field(default_factory=RestoreConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
 
     @property

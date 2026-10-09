@@ -345,8 +345,8 @@ def create_app() -> gr.Blocks:
                 gr.Markdown("### Faces and output")
                 with gr.Row():
                     set_face_crop = gr.Checkbox(
-                        label="Re-edit faces at full resolution",
-                        value=config.processing.face_crop_edit,
+                        label="Re-edit faces at full resolution (removed — made identity worse)",
+                        value=False, interactive=False,
                         info=f"Detector in use: {runtime.face_backend}",
                     )
                     set_preserve_exif = gr.Checkbox(
@@ -405,7 +405,6 @@ def create_app() -> gr.Blocks:
                         "image.edit_model": edit_model,
                         "image.upscale_model": upscale_model,
                         "image.upscale_creativity": int(creativity),
-                        "processing.face_crop_edit": face_crop,
                         "processing.preserve_exif": preserve_exif,
                         "processing.output_format": output_format,
                         "processing.max_upload_megapixels": float(max_upload),

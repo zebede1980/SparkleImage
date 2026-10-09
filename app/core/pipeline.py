@@ -5,7 +5,6 @@ code did not:
 
 - the output has the same pixel dimensions as the source (never a padded square),
 - a masked operation changes only the masked region,
-- faces get a second pass at their own resolution, then are composited back,
 - EXIF survives,
 - a blank "success" from a content filter is reported as the error it is.
 """
@@ -21,7 +20,7 @@ from PIL import Image
 from app.clients.catalog import ImageModel
 from app.clients.image_api import ImageAPIClient, SafetyBlockedError
 from app.config.models import ImageAPIConfig, ProcessingConfig
-from app.core.faces import FaceDetector, crop_face, paste_face
+from app.core.faces import FaceDetector
 from app.core.geometry import composite_masked, restore_geometry
 from app.core.operations import Operation
 
@@ -61,48 +60,6 @@ def _carry_exif(source: Image.Image, target: Image.Image, enabled: bool) -> Imag
     if exif:
         target.info["exif"] = exif
     return target
-
-
-async def refine_faces(
-    client: ImageAPIClient,
-    model: ImageModel,
-    source: Image.Image,
-    edited: Image.Image,
-    instruction: str,
-    processing: ProcessingConfig,
-    detector: Optional[FaceDetector] = None,
-    max_faces: int = 4,
-) -> tuple[Image.Image, list[str]]:
-    """Re-run the edit on each face at full resolution and composite it back.
-
-    The crop comes from the *source*, not from the already-edited frame: the
-    point is to give the model the face at the resolution the scan actually
-    holds, rather than whatever survived the whole-image pass.
-    """
-    detector = detector or FaceDetector()
-    notes: list[str] = []
-    faces = detector.detect(source)
-    if not faces:
-        return edited, ["No faces detected — no face pass needed."]
-
-    result = edited
-    for index, face in enumerate(faces[:max_faces], start=1):
-        patch, box = crop_face(source, face, processing.face_padding)
-        try:
-            refined = await client.edit(patch, instruction, model)
-        except SafetyBlockedError as exc:
-            notes.append(f"Face {index}: skipped ({exc})")
-            continue
-        except Exception as exc:  # a failed face must not lose the whole result
-            logger.warning("Face refine %d failed: %s", index, exc)
-            notes.append(f"Face {index}: skipped ({exc})")
-            continue
-        result = paste_face(result, refined, box, feather=processing.composite_feather)
-        notes.append(
-            f"Face {index}: re-edited at {patch.width}×{patch.height} "
-            f"({detector.backend}, confidence {face.confidence:.2f})"
-        )
-    return result, notes
 
 
 async def run_operation(
@@ -188,16 +145,6 @@ async def run_operation(
     # Everything below restores the photograph's own geometry. A model returns
     # its own frame at its own size; the output must be the same photo.
     edited = restore_geometry(edited, original_size)
-
-    if operation.refine_faces and processing.face_crop_edit and operation.kind == "edit":
-        try:
-            edited, face_notes = await refine_faces(
-                client, model, original, edited, instruction, processing, detector
-            )
-            result.notes.extend(face_notes)
-        except Exception as exc:
-            logger.warning("Face pass failed: %s", exc)
-            result.note(f"Face pass skipped: {exc}")
 
     if operation.composite_mask and mask is not None:
         edited = composite_masked(original, edited, mask, feather=processing.composite_feather)

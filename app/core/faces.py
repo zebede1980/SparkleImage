@@ -1,15 +1,10 @@
-"""Face detection, and the crop-edit-paste-back that actually preserves identity.
+"""Face detection, with the landmarks identity scoring needs.
 
 The previous implementation counted faces before and after an edit and called
-that "face preservation". It never ran (the weights it looked for were in no
-image and no code downloaded them) and would not have meant anything if it had:
-two faces before and two after says nothing about whether they are the same two
-people.
-
-What genuinely helps is resolution. A face 200px across in a 4000px scan is a
-handful of pixels by the time a model has worked on the whole frame, and that is
-where identity goes. So faces are cropped, edited at full size in their own
-right, and composited back.
+that "face preservation". Counting says nothing about whether they are the same
+people; `app.core.identity` measures that. This module only finds faces — and
+their five landmarks (eyes, nose, mouth corners), which is what lets ArcFace
+align a face before embedding it.
 """
 
 from __future__ import annotations
@@ -22,14 +17,15 @@ from typing import Optional
 
 import cv2
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 logger = logging.getLogger(__name__)
 
 # YuNet is small (~340KB), far better than a Haar cascade, and fetched at image
 # build time. When it is absent — a bare checkout, a dev box — detection falls
 # back to the cascade that ships inside opencv-python itself, so there is no
-# configuration under which the detector silently finds nothing.
+# configuration under which the detector silently finds nothing. The cascade
+# gives no landmarks, so identity scoring is unavailable on that path.
 YUNET_FILENAME = "face_detection_yunet_2023mar.onnx"
 YUNET_SEARCH_PATHS = (
     Path(os.environ.get("SPARKLE_YUNET_PATH", "")),
@@ -37,31 +33,44 @@ YUNET_SEARCH_PATHS = (
     Path("/app/data/models") / YUNET_FILENAME,
 )
 
+# YuNet works on the image at whatever size it's given. Faces in an old group
+# photo are often under 60px — below what it reliably finds — while a 20MP scan
+# is needlessly slow. Detection runs on a copy scaled to roughly this long edge.
+DETECT_LONG_EDGE = 2400
+
+Landmarks = tuple[tuple[float, float], ...]
+
 
 @dataclass(frozen=True)
 class FaceBox:
-    """A detected face, in pixels."""
+    """A detected face, in pixels of the image it was found in."""
 
     x: int
     y: int
     width: int
     height: int
     confidence: float = 1.0
+    landmarks: Optional[Landmarks] = None
 
     @property
     def area(self) -> int:
         return self.width * self.height
 
-    def padded(self, image_size: tuple[int, int], padding: float) -> tuple[int, int, int, int]:
-        """This face's box grown by `padding`, clipped to the image."""
-        img_w, img_h = image_size
-        pad_x = int(self.width * padding)
-        pad_y = int(self.height * padding)
-        left = max(0, self.x - pad_x)
-        top = max(0, self.y - pad_y)
-        right = min(img_w, self.x + self.width + pad_x)
-        bottom = min(img_h, self.y + self.height + pad_y)
-        return left, top, right, bottom
+    @property
+    def centre(self) -> tuple[float, float]:
+        return self.x + self.width / 2, self.y + self.height / 2
+
+    def scaled(self, factor_x: float, factor_y: float) -> "FaceBox":
+        """This face mapped into an image of a different size."""
+        marks = tuple((px * factor_x, py * factor_y) for px, py in self.landmarks) if self.landmarks else None
+        return FaceBox(
+            int(round(self.x * factor_x)),
+            int(round(self.y * factor_y)),
+            max(1, int(round(self.width * factor_x))),
+            max(1, int(round(self.height * factor_y))),
+            self.confidence,
+            marks,
+        )
 
 
 def _find_yunet() -> Optional[Path]:
@@ -83,19 +92,21 @@ class FaceDetector:
     def backend(self) -> str:
         return "yunet" if self._yunet_path else "haar"
 
+    @property
+    def gives_landmarks(self) -> bool:
+        return self._yunet_path is not None
+
     def _detect_yunet(self, bgr: np.ndarray) -> list[FaceBox]:
         height, width = bgr.shape[:2]
         detector = cv2.FaceDetectorYN.create(
-            str(self._yunet_path), "", (width, height), self.confidence_threshold
+            str(self._yunet_path), "", (width, height), self.confidence_threshold, 0.3, 5000
         )
-        detector.setInputSize((width, height))
         _, faces = detector.detect(bgr)
         results: list[FaceBox] = []
         for face in faces if faces is not None else []:
             x, y, w, h = (int(round(v)) for v in face[:4])
-            results.append(
-                FaceBox(max(0, x), max(0, y), max(1, w), max(1, h), float(face[-1]))
-            )
+            marks = tuple((float(face[4 + 2 * i]), float(face[5 + 2 * i])) for i in range(5))
+            results.append(FaceBox(max(0, x), max(0, y), max(1, w), max(1, h), float(face[14]), marks))
         return results
 
     def _detect_cascade(self, bgr: np.ndarray) -> list[FaceBox]:
@@ -113,9 +124,16 @@ class FaceDetector:
         return [FaceBox(int(x), int(y), int(w), int(h), 1.0) for x, y, w, h in found]
 
     def _detect_array(self, image: Image.Image) -> list[FaceBox]:
-        array = np.array(image.convert("RGB"))
-        bgr = cv2.cvtColor(array, cv2.COLOR_RGB2BGR)
-        return self._detect_yunet(bgr) if self._yunet_path else self._detect_cascade(bgr)
+        rgb = image.convert("RGB")
+        scale = min(4.0, max(0.25, DETECT_LONG_EDGE / max(rgb.size)))
+        if abs(scale - 1.0) > 0.05:
+            resample = Image.BICUBIC if scale > 1 else Image.LANCZOS
+            rgb = rgb.resize((max(1, round(rgb.width * scale)), max(1, round(rgb.height * scale))), resample)
+        else:
+            scale = 1.0
+        bgr = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
+        faces = self._detect_yunet(bgr) if self._yunet_path else self._detect_cascade(bgr)
+        return [f.scaled(1 / scale, 1 / scale) for f in faces] if scale != 1.0 else faces
 
     def detect(self, image: Image.Image) -> list[FaceBox]:
         """Find faces, largest first.
@@ -128,8 +146,6 @@ class FaceDetector:
         """
         faces = self._detect_array(image)
         if not faces:
-            from PIL import ImageOps
-
             normalised = ImageOps.autocontrast(image.convert("RGB"), cutoff=1)
             faces = self._detect_array(normalised)
             if faces:
@@ -138,42 +154,3 @@ class FaceDetector:
 
     def has_faces(self, image: Image.Image) -> bool:
         return bool(self.detect(image))
-
-
-def crop_face(
-    image: Image.Image, face: FaceBox, padding: float
-) -> tuple[Image.Image, tuple[int, int, int, int]]:
-    """Crop a padded region around `face`, returning the crop and its box."""
-    box = face.padded(image.size, padding)
-    return image.crop(box), box
-
-
-def paste_face(
-    canvas: Image.Image,
-    patch: Image.Image,
-    box: tuple[int, int, int, int],
-    feather: int = 8,
-) -> Image.Image:
-    """Composite an edited face patch back into `canvas` with a soft edge."""
-    from PIL import ImageDraw
-
-    from app.core.geometry import feather_mask
-
-    left, top, right, bottom = box
-    target_size = (right - left, bottom - top)
-    if patch.size != target_size:
-        patch = patch.resize(target_size, Image.LANCZOS)
-
-    # A rectangle inset by the feather radius, blurred outwards, so the patch
-    # fades into the surrounding photograph instead of showing its edges.
-    mask = Image.new("L", target_size, 0)
-    inset = min(feather, target_size[0] // 3, target_size[1] // 3)
-    ImageDraw.Draw(mask).rectangle(
-        [inset, inset, target_size[0] - inset - 1, target_size[1] - inset - 1], fill=255
-    )
-    if feather > 0:
-        mask = feather_mask(mask, feather)
-
-    result = canvas.convert("RGB").copy()
-    result.paste(patch.convert("RGB"), (left, top), mask)
-    return result

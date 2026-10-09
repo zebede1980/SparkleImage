@@ -49,8 +49,6 @@ class Operation:
     # Localised work must leave the rest of the photograph untouched; whole-image
     # work (colourising, denoising) legitimately changes every pixel.
     composite_mask: bool = False
-    # Whether a second pass over each detected face at full resolution helps.
-    refine_faces: bool = True
 
     def instruction(self, params: Optional[dict[str, Any]] = None) -> str:
         text = self.build_instruction(params or {})
@@ -166,7 +164,6 @@ OPERATIONS: dict[str, Operation] = {
         ),
         needs_mask=True,
         composite_mask=True,
-        refine_faces=False,
     ),
     "upscale": Operation(
         id="upscale",
@@ -178,7 +175,6 @@ OPERATIONS: dict[str, Operation] = {
                   help="Output size in megapixels"),
         ),
         kind="upscale",
-        refine_faces=False,
     ),
 }
 

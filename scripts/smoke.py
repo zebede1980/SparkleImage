@@ -32,7 +32,6 @@ async def main() -> int:
     parser.add_argument("operation", choices=list(OPERATIONS))
     parser.add_argument("--model", help="Override the configured edit model")
     parser.add_argument("--era", default="", help="Era hint for colourise")
-    parser.add_argument("--no-faces", action="store_true", help="Skip the face pass")
     parser.add_argument("--out", type=Path, help="Where to write the result")
     args = parser.parse_args()
 
@@ -41,8 +40,6 @@ async def main() -> int:
     config = get_config()
     if args.model:
         config.image.edit_model = args.model
-    if args.no_faces:
-        config.processing.face_crop_edit = False
     if not config.image.api_key:
         print("No API key. Set SPARKLE_IMAGE__API_KEY or add one to data/config.yaml.")
         return 2

@@ -1,21 +1,15 @@
 """Face detection and the crop/paste-back mechanics."""
 
+from pathlib import Path
+
 import pytest
 from PIL import Image
 
-from app.core.faces import FaceBox, FaceDetector, crop_face, paste_face
+from app.core.faces import DETECT_LONG_EDGE, FaceBox, FaceDetector
 from tests.conftest import make_photo
 
 
 class TestFaceBox:
-    def test_padding_grows_the_box(self):
-        box = FaceBox(100, 100, 200, 200).padded((1000, 1000), 0.5)
-        assert box == (0, 0, 400, 400)
-
-    def test_padding_is_clipped_to_the_image(self):
-        box = FaceBox(10, 10, 100, 100).padded((150, 150), 1.0)
-        assert box == (0, 0, 150, 150)
-
     def test_largest_face_sorts_first(self):
         detector = FaceDetector()
         small, large = FaceBox(0, 0, 10, 10), FaceBox(0, 0, 100, 100)
@@ -56,33 +50,41 @@ class TestFadedScanRetry:
         assert Never().detect(make_photo((200, 200))) == []
 
 
-class TestCropAndPaste:
-    def test_crop_returns_the_padded_region(self):
-        photo = make_photo((400, 400))
-        patch, box = crop_face(photo, FaceBox(100, 100, 100, 100), padding=0.5)
-        assert box == (50, 50, 250, 250)
-        assert patch.size == (200, 200)
+class TestScaling:
+    def test_box_and_landmarks_scale_together(self):
+        face = FaceBox(100, 50, 40, 60, 0.9, ((110.0, 70.0), (130.0, 70.0), (120.0, 80.0), (112.0, 95.0), (128.0, 95.0)))
+        half = face.scaled(0.5, 0.5)
+        assert (half.x, half.y, half.width, half.height) == (50, 25, 20, 30)
+        assert half.landmarks[0] == (55.0, 35.0)
+        assert half.confidence == 0.9
 
-    def test_paste_puts_the_patch_back_where_it_came_from(self):
-        canvas = Image.new("RGB", (300, 300), (255, 0, 0))
-        patch = Image.new("RGB", (100, 100), (0, 0, 255))
-        result = paste_face(canvas, patch, (100, 100, 200, 200), feather=0)
-        assert result.getpixel((150, 150)) == (0, 0, 255)  # inside the patch
-        assert result.getpixel((10, 10)) == (255, 0, 0)    # outside it
+    def test_centre(self):
+        assert FaceBox(10, 20, 30, 40).centre == (25.0, 40.0)
 
-    def test_a_patch_at_the_wrong_size_is_resized_to_the_box(self):
-        canvas = Image.new("RGB", (300, 300), (255, 0, 0))
-        patch = Image.new("RGB", (512, 512), (0, 0, 255))
-        result = paste_face(canvas, patch, (100, 100, 200, 200), feather=0)
-        assert result.size == (300, 300)
-        assert result.getpixel((150, 150)) == (0, 0, 255)
 
-    def test_feathering_softens_the_edge_without_moving_it(self):
-        canvas = Image.new("RGB", (300, 300), (255, 0, 0))
-        patch = Image.new("RGB", (100, 100), (0, 0, 255))
-        result = paste_face(canvas, patch, (100, 100, 200, 200), feather=10)
-        # Centre fully replaced, far outside untouched, edge a blend of the two.
-        assert result.getpixel((150, 150)) == (0, 0, 255)
-        assert result.getpixel((5, 5)) == (255, 0, 0)
-        edge = result.getpixel((101, 150))
-        assert 0 < edge[0] < 255 and 0 < edge[2] < 255
+class TestDetectionSize:
+    """Detection runs on a copy near DETECT_LONG_EDGE; results come back in source pixels."""
+
+    class Recorder(FaceDetector):
+        def __init__(self):
+            super().__init__()
+            self._yunet_path = Path("fake.onnx")  # force the YuNet branch
+            self.seen = []
+
+        def _detect_yunet(self, bgr):
+            height, width = bgr.shape[:2]
+            self.seen.append((width, height))
+            # One face filling the middle quarter of whatever it was shown.
+            return [FaceBox(width // 4, height // 4, width // 2, height // 2, 0.9,
+                            ((width / 2, height / 2),) * 5)]
+
+    @pytest.mark.parametrize("size", [(300, 200), (6000, 4000)])
+    def test_small_and_huge_images_are_resized_for_detection_and_mapped_back(self, size):
+        detector = self.Recorder()
+        faces = detector.detect(Image.new("RGB", size, (128, 128, 128)))
+        expected_scale = min(4.0, max(0.25, DETECT_LONG_EDGE / max(size)))  # small: 4x cap; huge: down to 2400
+        assert max(detector.seen[0]) == pytest.approx(max(size) * expected_scale, abs=2)
+        face = faces[0]
+        assert face.x == pytest.approx(size[0] // 4, abs=4)
+        assert face.width == pytest.approx(size[0] // 2, abs=4)
+        assert face.landmarks[0][0] == pytest.approx(size[0] / 2, abs=4)
