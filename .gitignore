@@ -6,3 +6,4 @@ data/uploads/
 data/config.yaml
 data/models/
 .env
+*.egg-info/
