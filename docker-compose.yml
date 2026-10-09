@@ -11,16 +11,22 @@ services:
     image: sparkleimage:latest
     container_name: sparkleimage
     restart: unless-stopped
+    # Reached through Nginx Proxy Manager on nginx-proxy-nw. The host port is
+    # bound to localhost only, for checks from the server itself.
     ports:
-      - "7860:7860"
+      - "127.0.0.1:${SPARKLE_PORT:-7860}:7860"
+    networks:
+      - nginx-proxy-nw
     volumes:
       - ./data:/app/data
     environment:
-      # Environment wins over the saved data/config.yaml.
+      # Environment wins over the saved data/config.yaml; an empty value here
+      # is ignored, so leaving one blank lets the Settings tab own it.
+      - SPARKLE_COMFY__URL=${COMFY_URL:-}
+      - SPARKLE_COMFY__API_KEY=${COMFY_API_KEY:-}
       - SPARKLE_IMAGE__BASE_URL=${IMAGE_API_URL:-https://nano-gpt.com/api/v1}
       - SPARKLE_IMAGE__API_KEY=${IMAGE_API_KEY:-}
       - SPARKLE_IMAGE__EDIT_MODEL=${EDIT_MODEL:-seedream-v4.5}
-      - SPARKLE_IMAGE__UPSCALE_MODEL=${UPSCALE_MODEL:-clarity-ai-pro-upscaler}
       - SPARKLE_UI__SERVER_NAME=0.0.0.0
       - SPARKLE_UI__SERVER_PORT=7860
       # Set both to require a login. Do this before exposing the app publicly.
@@ -32,3 +38,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 20s
+
+networks:
+  nginx-proxy-nw:
+    external: true

@@ -27,9 +27,12 @@ logger = logging.getLogger(__name__)
 # configuration under which the detector silently finds nothing. The cascade
 # gives no landmarks, so identity scoring is unavailable on that path.
 YUNET_FILENAME = "face_detection_yunet_2023mar.onnx"
+# /app/models is where the image bakes it in. Not /app/data/models: compose
+# bind-mounts ./data over /app/data, which hides anything the image put there.
 YUNET_SEARCH_PATHS = (
     Path(os.environ.get("SPARKLE_YUNET_PATH", "")),
     Path("data/models") / YUNET_FILENAME,
+    Path("/app/models") / YUNET_FILENAME,
     Path("/app/data/models") / YUNET_FILENAME,
 )
 

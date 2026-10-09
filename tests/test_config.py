@@ -41,6 +41,17 @@ def test_file_still_wins_over_defaults_for_untouched_keys(tmp_path, monkeypatch)
     assert config.image.timeout == 444
 
 
+def test_an_empty_environment_variable_does_not_blank_the_saved_value(tmp_path, monkeypatch):
+    # docker-compose's `${COMFY_URL:-}` sets the variable to "" when unset.
+    path = tmp_path / "config.yaml"
+    path.write_text(yaml.safe_dump({"comfy": {"url": "https://gpu.example", "api_key": "saved"}}))
+    monkeypatch.setenv("SPARKLE_COMFY__URL", "")
+    monkeypatch.setenv("SPARKLE_COMFY__API_KEY", "")
+    config = ConfigManager(path).load()
+    assert config.comfy.url == "https://gpu.example"
+    assert config.comfy.api_key == "saved"
+
+
 def test_auth_tuple_needs_both_halves(tmp_path):
     manager = ConfigManager(tmp_path / "config.yaml")
     config = manager.load()

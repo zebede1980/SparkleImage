@@ -34,6 +34,7 @@ ARCFACE_FILENAME = "w600k_r50.onnx"
 ARCFACE_SEARCH_PATHS = (
     Path(os.environ.get("SPARKLE_ARCFACE_PATH", "")),
     Path("data/models") / ARCFACE_FILENAME,
+    Path("/app/models") / ARCFACE_FILENAME,  # baked into the image (see faces.YUNET_SEARCH_PATHS)
     Path("/app/data/models") / ARCFACE_FILENAME,
 )
 

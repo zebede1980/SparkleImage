@@ -146,6 +146,9 @@ class AppConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_prefix="SPARKLE_",
         env_nested_delimiter="__",
+        # docker-compose passes `${VAR:-}` as an empty string when VAR is unset;
+        # without this, that empty string would override what Settings saved.
+        env_ignore_empty=True,
         extra="ignore",
         yaml_file="data/config.yaml",
     )

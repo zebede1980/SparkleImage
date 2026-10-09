@@ -13,6 +13,22 @@ COPY app/ ./app/
 RUN pip install --no-cache-dir --upgrade pip build \
     && python -m build --wheel
 
+# --- Face models ---
+# YuNet (detector, ~230KB) and insightface's ArcFace w600k_r50 (identity,
+# 166MB, shipped only inside the 275MB buffalo_l zip — the rest is discarded).
+# Both are required: a build that can't fetch them fails rather than shipping
+# an app that silently can't compare faces. ArcFace weights are licensed for
+# non-commercial use only.
+FROM debian:bookworm-slim AS models
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /models && cd /tmp \
+    && curl -fsSL -o /models/face_detection_yunet_2023mar.onnx \
+       https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx \
+    && curl -fsSL -o buffalo_l.zip https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip \
+    && unzip -j buffalo_l.zip w600k_r50.onnx -d /models \
+    && rm buffalo_l.zip
+
 # --- Runtime ---
 FROM python:3.11-slim-bookworm AS runtime
 
@@ -32,14 +48,12 @@ WORKDIR /app
 COPY --from=builder /build/dist/*.whl ./
 RUN pip install --no-cache-dir *.whl && rm *.whl
 
-# YuNet face detector (~230KB). Without it the app falls back to OpenCV's
-# bundled Haar cascade, so a failed download degrades quality rather than
-# breaking detection — which is what happened to the previous face check,
-# whose weights were never fetched at all.
-RUN mkdir -p /app/data/models && \
-    curl -fsSL -o /app/data/models/face_detection_yunet_2023mar.onnx \
-      https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx \
-    || echo "YuNet download failed — falling back to the bundled cascade"
+# Face models live in /app/models, not /app/data/models: compose bind-mounts
+# ./data over /app/data, which would hide anything baked in underneath it.
+COPY --from=models /models /app/models
+
+# No usage reporting to Hugging Face from a private photo app.
+ENV GRADIO_ANALYTICS_ENABLED=False
 
 # Run as a normal user. Bind-mounted host directories must be writable by this
 # uid; docker-compose sets it from the host so the container need not run as root.
@@ -47,7 +61,7 @@ ARG APP_UID=1000
 ARG APP_GID=1000
 RUN groupadd -g "${APP_GID}" sparkle 2>/dev/null || true && \
     useradd -u "${APP_UID}" -g "${APP_GID}" -d /app -s /sbin/nologin sparkle 2>/dev/null || true && \
-    mkdir -p /app/data/uploads /app/data/output && \
+    mkdir -p /app/data/jobs /app/data/output && \
     chown -R "${APP_UID}:${APP_GID}" /app
 USER ${APP_UID}:${APP_GID}
 
