@@ -1,3 +1,3 @@
-"""SparkleImage - AI Photo Repair & Enhancement Tool."""
+"""SparkleImage — AI photo repair, recovery and enhancement."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

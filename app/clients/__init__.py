@@ -1,6 +1,19 @@
 """API clients for SparkleImage."""
 
-from app.clients.nanogpt import NanoGPTClient
-from app.clients.dalle3 import Dalle3Client
+from app.clients.catalog import ImageModel, fetch_image_models, parse_image_models
+from app.clients.image_api import (
+    AuthenticationError,
+    ImageAPIClient,
+    ImageAPIError,
+    SafetyBlockedError,
+)
 
-__all__ = ["NanoGPTClient", "Dalle3Client"]
+__all__ = [
+    "ImageModel",
+    "fetch_image_models",
+    "parse_image_models",
+    "AuthenticationError",
+    "ImageAPIClient",
+    "ImageAPIError",
+    "SafetyBlockedError",
+]

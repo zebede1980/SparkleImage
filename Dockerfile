@@ -1,67 +1,59 @@
-# SparkleImage - AI Photo Repair & Enhancement
-# Optimized for Linux ARM64 (Ampere) servers
+# SparkleImage — AI photo repair & enhancement
+# Optimised for Linux ARM64 (Ampere) servers.
 
 FROM python:3.11-slim-bookworm AS builder
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    g++ \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libglib2.0-0 \
+    gcc g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir build && \
-    python -m build --wheel
+COPY pyproject.toml README.md ./
+COPY app/ ./app/
+RUN pip install --no-cache-dir --upgrade pip build \
+    && python -m build --wheel
 
-# --- Runtime stage ---
+# --- Runtime ---
 FROM python:3.11-slim-bookworm AS runtime
 
-LABEL maintainer="SparkleImage Team"
-LABEL description="AI Photo Repair, Recovery & Enhancement Tool"
+LABEL description="AI photo repair, recovery and enhancement"
 
-# Install runtime dependencies
+# opencv-python-headless needs no GUI libraries — only libgomp for its
+# threading. The previous image pulled in libgl1/libsm6/libxext6 to satisfy the
+# non-headless build.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libgl1 \
+    libgomp1 curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Create non-root user for security
-RUN groupadd -r sparkle && useradd -r -g sparkle -d /app -s /sbin/nologin sparkle
-
-# Copy built wheel and install
+# The wheel is the only copy of the application code — the previous image
+# installed the wheel *and* copied app/ over the top of it.
 COPY --from=builder /build/dist/*.whl ./
 RUN pip install --no-cache-dir *.whl && rm *.whl
 
-# Copy application code
-COPY app/ ./app/
+# YuNet face detector (~230KB). Without it the app falls back to OpenCV's
+# bundled Haar cascade, so a failed download degrades quality rather than
+# breaking detection — which is what happened to the previous face check,
+# whose weights were never fetched at all.
+RUN mkdir -p /app/data/models && \
+    curl -fsSL -o /app/data/models/face_detection_yunet_2023mar.onnx \
+      https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx \
+    || echo "YuNet download failed — falling back to the bundled cascade"
 
-# Create directories and set permissions
-RUN mkdir -p data/uploads data/output data/config && \
-    chown -R sparkle:sparkle /app
+# Run as a normal user. Bind-mounted host directories must be writable by this
+# uid; docker-compose sets it from the host so the container need not run as root.
+ARG APP_UID=1000
+ARG APP_GID=1000
+RUN groupadd -g "${APP_GID}" sparkle 2>/dev/null || true && \
+    useradd -u "${APP_UID}" -g "${APP_GID}" -d /app -s /sbin/nologin sparkle 2>/dev/null || true && \
+    mkdir -p /app/data/uploads /app/data/output && \
+    chown -R "${APP_UID}:${APP_GID}" /app
+USER ${APP_UID}:${APP_GID}
 
-# NOTE: Running as root so bind-mounted host volumes (./data/output etc.)
-# are writable. For production, use named volumes or set host UID/GID.
-# USER sparkle
-
-# Expose Gradio port
 EXPOSE 7860
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:7860/')" || exit 1
 
 ENTRYPOINT ["python", "-m", "app.main"]

@@ -1,34 +1,34 @@
-version: "3.8"
-
 services:
   sparkleimage:
     build:
       context: .
       dockerfile: Dockerfile
-      platforms:
-        - linux/arm64
+      args:
+        # Match the host user so bind-mounted output stays writable without
+        # running the container as root.
+        APP_UID: "${APP_UID:-1000}"
+        APP_GID: "${APP_GID:-1000}"
     image: sparkleimage:latest
     container_name: sparkleimage
     restart: unless-stopped
     ports:
       - "7860:7860"
     volumes:
-      - ./data/config:/app/data/config
-      - ./data/output:/app/data/output
-      - ./data/uploads:/app/data/uploads
+      - ./data:/app/data
     environment:
-      # Override config via environment variables
-      - SPARKLE_NANOGPT__API_URL=${NANOGPT_API_URL:-https://api.nanogpt.com/v1}
-      - SPARKLE_NANOGPT__API_KEY=${NANOGPT_API_KEY:-}
-      # Multi-model configuration
-      - SPARKLE_NANOGPT__VISION_MODEL__MODEL=${NANOGPT_VISION_MODEL:-gpt-4o}
-      - SPARKLE_NANOGPT__GENERATION_MODEL__MODEL=${NANOGPT_GENERATION_MODEL:-dall-e-2}
-      - SPARKLE_NANOGPT__USE_PROMPT_ENHANCEMENT=${USE_PROMPT_ENHANCEMENT:-true}
+      # Environment wins over the saved data/config.yaml.
+      - SPARKLE_IMAGE__BASE_URL=${IMAGE_API_URL:-https://nano-gpt.com/api/v1}
+      - SPARKLE_IMAGE__API_KEY=${IMAGE_API_KEY:-}
+      - SPARKLE_IMAGE__EDIT_MODEL=${EDIT_MODEL:-seedream-v4.5}
+      - SPARKLE_IMAGE__UPSCALE_MODEL=${UPSCALE_MODEL:-clarity-ai-pro-upscaler}
       - SPARKLE_UI__SERVER_NAME=0.0.0.0
       - SPARKLE_UI__SERVER_PORT=7860
+      # Set both to require a login. Do this before exposing the app publicly.
+      - SPARKLE_UI__AUTH_USERNAME=${AUTH_USERNAME:-}
+      - SPARKLE_UI__AUTH_PASSWORD=${AUTH_PASSWORD:-}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/')"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 20s

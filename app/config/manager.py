@@ -20,18 +20,19 @@ class ConfigManager:
         self._config: Optional[AppConfig] = None
 
     def load(self) -> AppConfig:
-        """Load configuration from YAML file or create defaults."""
+        """Load configuration.
+
+        Precedence is environment > saved YAML > defaults, handled by
+        AppConfig's settings sources — see settings_customise_sources there for
+        why this must not go back to reading the YAML directly.
+        """
         if self._config is not None:
             return self._config
 
-        if self.config_path.exists():
-            with open(self.config_path, "r", encoding="utf-8") as f:
-                data = yaml.safe_load(f) or {}
-            self._config = AppConfig.model_validate(data)
-        else:
-            self._config = AppConfig()
+        AppConfig.model_config["yaml_file"] = str(self.config_path)
+        self._config = AppConfig()
+        if not self.config_path.exists():
             self.save(self._config)
-
         return self._config
 
     def save(self, config: Optional[AppConfig] = None) -> None:
@@ -57,10 +58,8 @@ class ConfigManager:
         return self.load()
 
     def update_from_env(self) -> AppConfig:
-        """Reload config, allowing environment variables to override."""
-        self._config = AppConfig()
-        self.save(self._config)
-        return self._config
+        """Reload config from disk and environment."""
+        return self.reload()
 
 
 # Global singleton instance

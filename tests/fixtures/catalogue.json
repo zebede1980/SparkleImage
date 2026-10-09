@@ -1,0 +1,1043 @@
+{
+ "models": {
+  "image": {
+   "seedream-v4.5": {
+    "name": "Seedream 4.5",
+    "provider": "doubao",
+    "model": "seedream-v4.5",
+    "iconLabel": "both",
+    "dateAdded": "2025-12-03",
+    "description": "Seedream 4.5 is the latest image model with improved quality. High-quality results with sizes up to 4096x4096. Minimum total pixels: 3,686,400 (e.g., 1920x1920 or 1664x2496). Max input image size: 10MB.",
+    "capabilities": [
+     "nsfw"
+    ],
+    "censored": false,
+    "cost": {
+     "1920x1920": 0.04,
+     "2048x2048": 0.04,
+     "2496x1664": 0.04,
+     "1664x2496": 0.04,
+     "3072x2048": 0.04,
+     "2048x3072": 0.04,
+     "3072x2304": 0.04,
+     "2304x3072": 0.04,
+     "4096x2304": 0.04,
+     "2304x4096": 0.04,
+     "4096x4096": 0.04,
+     "auto": 0.04
+    },
+    "maxImages": 4,
+    "supportsMultipleImg2Img": true,
+    "inputImageConstraints": {
+     "maxBytes": 10485760,
+     "source": "provider-docs",
+     "note": "Provider model metadata states max input image size: 10MB."
+    },
+    "resolutions": [
+     {
+      "value": "1920x1920",
+      "comment": "Min Square"
+     },
+     {
+      "value": "2048x2048",
+      "comment": "Default (2K square)"
+     },
+     {
+      "value": "2496x1664",
+      "comment": "Min Landscape (3:2)"
+     },
+     {
+      "value": "1664x2496",
+      "comment": "Min Portrait (2:3)"
+     },
+     {
+      "value": "3072x2048",
+      "comment": "High-res Landscape (3:2)"
+     },
+     {
+      "value": "2048x3072",
+      "comment": "High-res Portrait (2:3)"
+     },
+     {
+      "value": "3072x2304",
+      "comment": "Landscape (4:3)"
+     },
+     {
+      "value": "2304x3072",
+      "comment": "Portrait (3:4)"
+     },
+     {
+      "value": "4096x2304",
+      "comment": "Max Landscape (16:9)"
+     },
+     {
+      "value": "2304x4096",
+      "comment": "Max Portrait (9:16)"
+     },
+     {
+      "value": "4096x4096",
+      "comment": "Max (4K square)"
+     }
+    ],
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "2048x2048"
+    },
+    "additionalParams": {
+     "customResolution": {
+      "enabled": true,
+      "minWidth": 1024,
+      "minHeight": 1024,
+      "maxWidth": 4096,
+      "maxHeight": 4096,
+      "step": 64,
+      "minTotalPixels": 3686400
+     },
+     "seed": {
+      "label": "Seed",
+      "description": "Random seed to control image generation (-1 for random).",
+      "default": -1,
+      "type": "number"
+     }
+    }
+   },
+   "seedream-v5.0-lite": {
+    "name": "Seedream 5.0 Lite",
+    "provider": "doubao",
+    "model": "seedream-v5.0-lite",
+    "iconLabel": "both",
+    "dateAdded": "2026-02-24",
+    "description": "ByteDance Seedream 5.0 Lite for text-to-image and image editing with strong prompt adherence, improved typography, and up to 4K output. Upload an image to switch to edit mode. Minimum total pixels: 3,686,400.",
+    "censored": true,
+    "cost": {
+     "1440x2560": 0.035,
+     "2560x1440": 0.035,
+     "2048x2048": 0.035,
+     "3072x2048": 0.035,
+     "2048x3072": 0.035,
+     "4096x2304": 0.035,
+     "2304x4096": 0.035,
+     "auto": 0.035
+    },
+    "maxImages": 4,
+    "supportsMultipleImg2Img": true,
+    "resolutions": [
+     {
+      "value": "2048x2048",
+      "comment": "Default (2K square)"
+     },
+     {
+      "value": "2560x1440",
+      "comment": "Landscape (16:9)"
+     },
+     {
+      "value": "1440x2560",
+      "comment": "Portrait (9:16)"
+     },
+     {
+      "value": "3072x2048",
+      "comment": "High-res Landscape (3:2)"
+     },
+     {
+      "value": "2048x3072",
+      "comment": "High-res Portrait (2:3)"
+     },
+     {
+      "value": "4096x2304",
+      "comment": "Max Landscape (16:9)"
+     },
+     {
+      "value": "2304x4096",
+      "comment": "Max Portrait (9:16)"
+     }
+    ],
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "2048x2048"
+    },
+    "additionalParams": {
+     "customResolution": {
+      "enabled": true,
+      "minWidth": 1440,
+      "minHeight": 1440,
+      "maxWidth": 4096,
+      "maxHeight": 4096,
+      "step": 64,
+      "allowedSizes": [
+       "2560x1440",
+       "1440x2560"
+      ],
+      "minTotalPixels": 3686400,
+      "maxTotalPixels": 10404496
+     }
+    },
+    "tags": [
+     "text-to-image",
+     "image-edit",
+     "4k"
+    ]
+   },
+   "clarity-ai-pro-upscaler": {
+    "name": "Clarity AI Pro Upscaler",
+    "provider": "clarityai",
+    "model": "clarity-ai-pro-upscaler",
+    "iconLabel": "image-to-image",
+    "dateAdded": "2026-05-11",
+    "description": "Clarity AI Pro Upscaler enhances images with photorealistic detail, identity preservation, and predictable target-megapixel output sizing.",
+    "cost": {
+     "auto": 0.12
+    },
+    "maxImages": 1,
+    "resolutions": [
+     {
+      "value": "auto",
+      "comment": "Pricing is based on target megapixels"
+     }
+    ],
+    "additionalParams": {
+     "target_megapixels": {
+      "label": "Target Megapixels",
+      "description": "Target output size in megapixels (MP). Higher MP yields larger outputs and higher cost.",
+      "default": 4,
+      "min": 1,
+      "max": 64,
+      "step": 1
+     },
+     "creativity": {
+      "label": "Creativity",
+      "description": "Controls how much new detail is added during upscaling.",
+      "default": 0,
+      "min": -10,
+      "max": 10,
+      "step": 1
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "auto",
+     "target_megapixels": 4,
+     "creativity": 0
+    },
+    "tags": [
+     "upscale",
+     "image-to-image",
+     "clarity-ai",
+     "photorealistic"
+    ]
+   },
+   "seedvr2-image": {
+    "name": "SeedVR2 Image Upscaler",
+    "provider": "bytedance",
+    "model": "seedvr2-image",
+    "iconLabel": "image-to-image",
+    "dateAdded": "2025-12-15",
+    "description": "SeedVR2 Image Upscaler boosts image resolution and quality for sharper, more detailed results. Supports 2K, 4K, and 8K upscales with configurable output formats.",
+    "cost": {
+     "2k": 0.01,
+     "4k": 0.01,
+     "8k": 0.01
+    },
+    "maxImages": 1,
+    "resolutions": [
+     {
+      "value": "2k",
+      "comment": "Upscale to ~2K"
+     },
+     {
+      "value": "4k",
+      "comment": "Upscale to ~4K (default)"
+     },
+     {
+      "value": "8k",
+      "comment": "Upscale to ~8K"
+     }
+    ],
+    "additionalParams": {
+     "target_resolution": {
+      "label": "Target Resolution",
+      "description": "Choose the desired upscale target.",
+      "default": "4k",
+      "type": "select",
+      "options": [
+       {
+        "value": "2k",
+        "label": "2K"
+       },
+       {
+        "value": "4k",
+        "label": "4K"
+       },
+       {
+        "value": "8k",
+        "label": "8K"
+       }
+      ]
+     },
+     "output_format": {
+      "label": "Output Format",
+      "description": "Choose the output image format.",
+      "default": "jpeg",
+      "type": "select",
+      "options": [
+       {
+        "value": "jpeg",
+        "label": "JPEG"
+       },
+       {
+        "value": "png",
+        "label": "PNG"
+       },
+       {
+        "value": "webp",
+        "label": "WebP"
+       }
+      ]
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "4k",
+     "target_resolution": "4k",
+     "output_format": "jpeg"
+    },
+    "tags": [
+     "upscale",
+     "image-to-image",
+     "4k",
+     "8k"
+    ]
+   },
+   "flux-2-pro-image-to-image": {
+    "name": "FLUX.2 [pro] Edit",
+    "provider": "flux",
+    "model": "flux-2-pro-image-to-image",
+    "iconLabel": "image-to-image",
+    "description": "FLUX.2 [pro] Edit provides precise image-to-image editing using natural language instructions and hex color control. Modify objects, colors, materials, lighting, and scene elements while maintaining structural consistency.",
+    "cost": {
+     "auto": 0.051
+    },
+    "maxImages": 1,
+    "supportsMultipleImg2Img": true,
+    "resolutions": [
+     {
+      "value": "auto",
+      "comment": "Matches uploaded image"
+     }
+    ],
+    "additionalParams": {
+     "seed": {
+      "label": "Seed",
+      "description": "Control reproducibility (-1 for random).",
+      "default": -1,
+      "type": "number"
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "auto"
+    },
+    "tags": [
+     "image-edit"
+    ]
+   },
+   "flux-2-pro": {
+    "name": "FLUX.2 [pro]",
+    "provider": "flux",
+    "model": "flux-2-pro",
+    "iconLabel": "text-to-image",
+    "description": "FLUX.2 [pro] from Black Forest Labs delivers enhanced realism, crisper text generation, and native editing capabilities. A lightweight open-source model optimized for rapid prototyping, high-volume generation, and custom LoRA fine-tuning workflows.",
+    "cost": {
+     "1024*1024": 0.051,
+     "1280*720": 0.051,
+     "720*1280": 0.051,
+     "1536*1024": 0.051,
+     "1024*1536": 0.051
+    },
+    "maxImages": 4,
+    "resolutions": [
+     {
+      "value": "1024*1024",
+      "comment": "Square (1024x1024)"
+     },
+     {
+      "value": "1280*720",
+      "comment": "Landscape (1280x720)"
+     },
+     {
+      "value": "720*1280",
+      "comment": "Portrait (720x1280)"
+     },
+     {
+      "value": "1536*1024",
+      "comment": "Wide (1536x1024)"
+     },
+     {
+      "value": "1024*1536",
+      "comment": "Tall (1024x1536)"
+     }
+    ],
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "1024*1024"
+    },
+    "additionalParams": {
+     "seed": {
+      "label": "Seed",
+      "description": "Control reproducibility (-1 for random).",
+      "default": -1,
+      "type": "number"
+     }
+    },
+    "tags": [
+     "text-to-image",
+     "image-edit"
+    ]
+   },
+   "nano-banana-pro-edit": {
+    "name": "Nano Banana Pro Edit",
+    "provider": "gemini",
+    "model": "nano-banana-pro-edit",
+    "iconLabel": "image-to-image",
+    "description": "Upload reference images and apply natural-language edits while preserving lighting and composition. Supports multi-image inputs and high-res 4K outputs.",
+    "maxImages": 10,
+    "supportsMultipleImg2Img": true,
+    "cost": {
+     "1k": 0.14,
+     "2k": 0.14,
+     "4k": 0.24
+    },
+    "resolutions": [
+     {
+      "value": "1k",
+      "comment": "Fast edits (~1024px class)"
+     },
+     {
+      "value": "2k",
+      "comment": "Balanced detail (~2048px class)"
+     },
+     {
+      "value": "4k",
+      "comment": "Maximum fidelity (~4096px class)"
+     }
+    ],
+    "additionalParams": {
+     "aspect_ratio": {
+      "label": "Aspect Ratio",
+      "description": "Set the target framing for edits.",
+      "default": "auto",
+      "options": [
+       {
+        "value": "auto",
+        "label": "Auto (match input)"
+       },
+       {
+        "value": "1:1",
+        "label": "Square"
+       },
+       {
+        "value": "3:2",
+        "label": "3:2"
+       },
+       {
+        "value": "2:3",
+        "label": "2:3"
+       },
+       {
+        "value": "3:4",
+        "label": "3:4"
+       },
+       {
+        "value": "4:3",
+        "label": "4:3"
+       },
+       {
+        "value": "4:5",
+        "label": "4:5"
+       },
+       {
+        "value": "5:4",
+        "label": "5:4"
+       },
+       {
+        "value": "9:16",
+        "label": "9:16"
+       },
+       {
+        "value": "16:9",
+        "label": "16:9"
+       },
+       {
+        "value": "21:9",
+        "label": "21:9"
+       }
+      ]
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "1k",
+     "aspect_ratio": "auto"
+    },
+    "tags": [
+     "image-edit",
+     "4k"
+    ]
+   },
+   "reve/2.1/edit": {
+    "name": "Reve 2.1 Edit",
+    "provider": "reveai",
+    "model": "reve/2.1/edit",
+    "engine": "fal",
+    "modelPath": "reve/2.1/edit",
+    "iconLabel": "image-to-image",
+    "label": "NEW",
+    "labelVariant": "new",
+    "category": "New",
+    "dateAdded": "2026-07-15",
+    "description": "Reve 2.1 Edit applies precise natural-language changes to one reference image with native 4K output and accurate text rendering.",
+    "censored": true,
+    "cost": {
+     "auto": 0.28,
+     "4:1": 0.28,
+     "3:1": 0.28,
+     "21:9": 0.28,
+     "2:1": 0.28,
+     "17:9": 0.28,
+     "16:9": 0.28,
+     "3:2": 0.28,
+     "4:3": 0.28,
+     "5:4": 0.28,
+     "1:1": 0.28,
+     "4:5": 0.28,
+     "3:4": 0.28,
+     "2:3": 0.28,
+     "9:16": 0.28,
+     "1:2": 0.28,
+     "1:3": 0.28,
+     "1:4": 0.28
+    },
+    "maxImages": 4,
+    "supportsMultipleImg2Img": false,
+    "inputImageConstraints": {
+     "maxBytes": 10485760,
+     "formats": [
+      "png",
+      "jpeg",
+      "webp",
+      "avif",
+      "heif"
+     ],
+     "source": "provider-docs",
+     "note": "Reve 2.1 reference images must be smaller than 10 MB."
+    },
+    "resolutions": [
+     {
+      "value": "auto",
+      "comment": "Automatic"
+     },
+     {
+      "value": "4:1",
+      "comment": "4:1"
+     },
+     {
+      "value": "3:1",
+      "comment": "3:1"
+     },
+     {
+      "value": "21:9",
+      "comment": "21:9"
+     },
+     {
+      "value": "2:1",
+      "comment": "2:1"
+     },
+     {
+      "value": "17:9",
+      "comment": "17:9"
+     },
+     {
+      "value": "16:9",
+      "comment": "16:9"
+     },
+     {
+      "value": "3:2",
+      "comment": "3:2"
+     },
+     {
+      "value": "4:3",
+      "comment": "4:3"
+     },
+     {
+      "value": "5:4",
+      "comment": "5:4"
+     },
+     {
+      "value": "1:1",
+      "comment": "1:1"
+     },
+     {
+      "value": "4:5",
+      "comment": "4:5"
+     },
+     {
+      "value": "3:4",
+      "comment": "3:4"
+     },
+     {
+      "value": "2:3",
+      "comment": "2:3"
+     },
+     {
+      "value": "9:16",
+      "comment": "9:16"
+     },
+     {
+      "value": "1:2",
+      "comment": "1:2"
+     },
+     {
+      "value": "1:3",
+      "comment": "1:3"
+     },
+     {
+      "value": "1:4",
+      "comment": "1:4"
+     }
+    ],
+    "additionalParams": {
+     "output_format": {
+      "label": "Output Format",
+      "description": "Generated image format.",
+      "default": "png",
+      "type": "select",
+      "options": [
+       {
+        "value": "png",
+        "label": "PNG"
+       },
+       {
+        "value": "jpeg",
+        "label": "JPEG"
+       },
+       {
+        "value": "webp",
+        "label": "WebP"
+       }
+      ]
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "auto",
+     "aspect_ratio": "auto",
+     "output_format": "png"
+    },
+    "tags": [
+     "image-edit",
+     "4k",
+     "reve"
+    ]
+   },
+   "Upscaler": {
+    "name": "Upscaler",
+    "provider": "nanogpt",
+    "model": "Upscaler",
+    "category": "Tools",
+    "engine": "arli",
+    "iconLabel": "image-to-image",
+    "description": "Upscale any image up to 4x its original size using advanced AI upscaling. Simply upload an image and choose your desired scale factor.",
+    "cost": {
+     "1024x1024": 0.005,
+     "2048x2048": 0.005,
+     "4096x4096": 0.005
+    },
+    "maxImages": 1,
+    "resolutions": [
+     {
+      "value": "1024x1024",
+      "comment": "Input size (will be scaled)"
+     }
+    ],
+    "additionalParams": {
+     "upscaling_resize": {
+      "label": "Size Increase",
+      "description": "How much to increase the image size (2x = double, 4x = quadruple)",
+      "default": 2,
+      "min": 2,
+      "max": 4,
+      "step": 2,
+      "marks": [
+       {
+        "value": 2,
+        "label": "2x"
+       },
+       {
+        "value": 4,
+        "label": "4x"
+       }
+      ]
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "upscaling_resize": 2
+    }
+   },
+   "qwen-image-3-pro": {
+    "name": "Qwen Image 3 Pro",
+    "provider": "qwen",
+    "model": "qwen-image-3-pro",
+    "modelPath": "alibaba/qwen-image-3.0-pro/text-to-image",
+    "iconLabel": "both",
+    "label": "NEW",
+    "labelVariant": "new",
+    "dateAdded": "2026-08-05",
+    "category": "Featured",
+    "supportsMultipleImg2Img": true,
+    "description": "Alibaba's professional Qwen Image 3 model for high-quality 1K or 2K text-to-image generation and precise edits with up to 3 reference images.",
+    "cost": {
+     "auto": 0.04,
+     "1k": 0.04,
+     "2k": 0.075
+    },
+    "maxImages": 4,
+    "resolutions": [
+     {
+      "value": "1k",
+      "comment": "Standard resolution"
+     },
+     {
+      "value": "2k",
+      "comment": "High resolution"
+     }
+    ],
+    "inputImageConstraints": {
+     "minWidth": 384,
+     "minHeight": 384,
+     "maxWidth": 2048,
+     "maxHeight": 2048,
+     "maxBytes": 10485760,
+     "formats": [
+      "png",
+      "jpeg",
+      "webp"
+     ],
+     "source": "provider-docs",
+     "note": "Qwen Image 3 Pro Edit accepts 1-3 JPEG, PNG, or WebP reference images."
+    },
+    "additionalParams": {
+     "aspect_ratio": {
+      "label": "Aspect Ratio",
+      "description": "Control output framing. Auto preserves the first reference image for edits.",
+      "default": "auto",
+      "type": "select",
+      "options": [
+       {
+        "value": "auto",
+        "label": "Auto"
+       },
+       {
+        "value": "1:1",
+        "label": "1:1"
+       },
+       {
+        "value": "1:2",
+        "label": "1:2"
+       },
+       {
+        "value": "2:1",
+        "label": "2:1"
+       },
+       {
+        "value": "1:3",
+        "label": "1:3"
+       },
+       {
+        "value": "3:1",
+        "label": "3:1"
+       },
+       {
+        "value": "2:3",
+        "label": "2:3"
+       },
+       {
+        "value": "3:2",
+        "label": "3:2"
+       },
+       {
+        "value": "3:4",
+        "label": "3:4"
+       },
+       {
+        "value": "4:3",
+        "label": "4:3"
+       },
+       {
+        "value": "4:5",
+        "label": "4:5"
+       },
+       {
+        "value": "5:4",
+        "label": "5:4"
+       },
+       {
+        "value": "9:16",
+        "label": "9:16"
+       },
+       {
+        "value": "16:9",
+        "label": "16:9"
+       },
+       {
+        "value": "9:21",
+        "label": "9:21"
+       },
+       {
+        "value": "21:9",
+        "label": "21:9"
+       }
+      ]
+     },
+     "enable_prompt_expansion": {
+      "label": "Prompt Expansion",
+      "description": "Automatically rewrite the prompt for better results.",
+      "default": true,
+      "type": "boolean"
+     },
+     "seed": {
+      "label": "Seed",
+      "description": "Use -1 for random, or 0 to 2147483647 for reproducible output.",
+      "default": -1,
+      "type": "number"
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "1k",
+     "aspect_ratio": "auto",
+     "enable_prompt_expansion": true,
+     "seed": -1
+    },
+    "tags": [
+     "text-to-image",
+     "image-to-image",
+     "qwen",
+     "pro"
+    ]
+   },
+   "runware:106@1": {
+    "name": "Flux Kontext Dev",
+    "provider": "flux",
+    "model": "runware:106@1",
+    "engine": "runware",
+    "iconLabel": "both",
+    "description": "Flux Kontext Dev - High-quality image generation supporting both text-to-image and image-to-image modes. Optimized for excellent prompt adherence and artistic quality.",
+    "cost": {
+     "auto": 0.034,
+     "1568x672": 0.034,
+     "1504x688": 0.034,
+     "1456x720": 0.034,
+     "1392x752": 0.034,
+     "1328x800": 0.034,
+     "1248x832": 0.034,
+     "1184x880": 0.034,
+     "1104x944": 0.034,
+     "1024x1024": 0.034,
+     "944x1104": 0.034,
+     "880x1184": 0.034,
+     "832x1248": 0.034,
+     "800x1328": 0.034,
+     "752x1392": 0.034,
+     "720x1456": 0.034,
+     "688x1504": 0.034,
+     "672x1568": 0.034
+    },
+    "maxImages": 20,
+    "resolutions": [
+     {
+      "value": "auto",
+      "comment": "Auto-detect from input image (image-to-image only)"
+     },
+     {
+      "value": "1024x1024",
+      "comment": "Square (1:1) - Default"
+     },
+     {
+      "value": "1568x672",
+      "comment": "Wide Landscape (21:9)"
+     },
+     {
+      "value": "1504x688",
+      "comment": "Wide Landscape"
+     },
+     {
+      "value": "1456x720",
+      "comment": "Wide HD (~2:1)"
+     },
+     {
+      "value": "1392x752",
+      "comment": "Wide Landscape"
+     },
+     {
+      "value": "1328x800",
+      "comment": "Landscape (5:3)"
+     },
+     {
+      "value": "1248x832",
+      "comment": "Landscape (3:2)"
+     },
+     {
+      "value": "1184x880",
+      "comment": "Landscape (4:3)"
+     },
+     {
+      "value": "1104x944",
+      "comment": "Landscape"
+     },
+     {
+      "value": "944x1104",
+      "comment": "Portrait"
+     },
+     {
+      "value": "880x1184",
+      "comment": "Portrait (3:4)"
+     },
+     {
+      "value": "832x1248",
+      "comment": "Portrait (2:3)"
+     },
+     {
+      "value": "800x1328",
+      "comment": "Portrait (3:5)"
+     },
+     {
+      "value": "752x1392",
+      "comment": "Tall Portrait"
+     },
+     {
+      "value": "720x1456",
+      "comment": "Tall HD (~1:2)"
+     },
+     {
+      "value": "688x1504",
+      "comment": "Tall Portrait"
+     },
+     {
+      "value": "672x1568",
+      "comment": "Tall Portrait (9:21)"
+     }
+    ],
+    "additionalParams": {
+     "steps": {
+      "label": "Steps",
+      "description": "Number of denoising steps. Higher values may improve quality but take longer.",
+      "default": 28,
+      "min": 1,
+      "max": 50,
+      "step": 1,
+      "marks": [
+       {
+        "value": 1,
+        "label": "1"
+       },
+       {
+        "value": 28,
+        "label": "28"
+       },
+       {
+        "value": 50,
+        "label": "50"
+       }
+      ]
+     },
+     "CFGScale": {
+      "label": "CFG Scale",
+      "description": "Controls how closely the output image aligns with the prompt.",
+      "default": 2.5,
+      "min": 1,
+      "max": 10,
+      "step": 0.5,
+      "marks": [
+       {
+        "value": 1,
+        "label": "1"
+       },
+       {
+        "value": 2.5,
+        "label": "2.5"
+       },
+       {
+        "value": 10,
+        "label": "10"
+       }
+      ]
+     },
+     "seed": {
+      "label": "Seed",
+      "description": "Random seed to control image generation. Leave empty for random.",
+      "default": null,
+      "type": "number"
+     }
+    },
+    "defaultSettings": {
+     "nImages": 1,
+     "resolution": "1024x1024",
+     "steps": 28,
+     "CFGScale": 2.5
+    }
+   },
+   "dall-e-3": {
+    "name": "DALL-E-3",
+    "provider": "openai",
+    "model": "dall-e-3",
+    "engine": "dalle",
+    "description": "OpenAI's first image model.",
+    "censored": true,
+    "category": "More",
+    "cost": {
+     "1024x1024": 0.068,
+     "1024x1792": 0.136,
+     "1792x1024": 0.136
+    },
+    "maxImages": 1,
+    "resolutions": [
+     {
+      "value": "1024x1024"
+     },
+     {
+      "value": "1024x1792",
+      "comment": "2x the price"
+     },
+     {
+      "value": "1792x1024",
+      "comment": "2x the price"
+     }
+    ],
+    "additionalParams": {
+     "style": {
+      "label": "Style",
+      "description": "Choose between vivid (hyper-real and dramatic) or natural (more subdued) images",
+      "default": "vivid",
+      "options": [
+       {
+        "value": "vivid",
+        "label": "Vivid"
+       },
+       {
+        "value": "natural",
+        "label": "Natural"
+       }
+      ]
+     }
+    },
+    "defaultSettings": {
+     "width": 1024,
+     "height": 1024,
+     "nImages": 1,
+     "resolution": "1024x1024",
+     "style": "vivid"
+    }
+   }
+  }
+ }
+}
