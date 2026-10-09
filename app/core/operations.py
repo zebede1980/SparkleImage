@@ -179,12 +179,6 @@ OPERATIONS: dict[str, Operation] = {
 }
 
 
-# The one-click chain. Order matters: clean the physical damage before asking a
-# model to interpret colour, and enlarge last so the upscaler works on a photo
-# that is already repaired rather than magnifying its defects.
-RESTORE_CHAIN: tuple[str, ...] = ("descratch", "repair", "denoise", "colorize", "upscale")
-
-
 def get_operation(operation_id: str) -> Operation:
     try:
         return OPERATIONS[operation_id]

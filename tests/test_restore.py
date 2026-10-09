@@ -83,6 +83,11 @@ class TestChoosing:
         choices = restore.default_faces(cands, "local-s1", FACES, margin=0.02)
         assert choices == {0: "local-s2"}  # +0.10 swaps; +0.01 doesn't
 
+    def test_unreliably_low_scores_never_drive_a_swap(self):
+        # 0.30 vs 0.45: a big gap, but both are noise on a face with no real detail.
+        cands = [cand("local-s1", [0.30, 0.9]), cand("local-s2", [0.45, 0.9])]
+        assert restore.default_faces(cands, "local-s1", FACES) == {}
+
     def test_a_face_missing_from_the_base_is_filled_from_whoever_has_it(self):
         cands = [cand("local-s1", [None, 0.9]), cand("local-s2", [0.7, 0.8])]
         assert restore.default_faces(cands, "local-s1", FACES) == {0: "local-s2"}

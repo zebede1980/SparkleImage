@@ -160,11 +160,19 @@ def default_base(candidates: list[Candidate]) -> Optional[str]:
     return max(pool, key=lambda c: c.mean if c.mean is not None else -1).id
 
 
+# Below this, a likeness score says little. Seen on a grainy 1930s wedding
+# group where faces were ~60px of mostly print grain: every candidate scored
+# 0.2-0.56, and the model had in effect reconstructed the faces. Scores there
+# are noise, so they don't drive swaps, and the UI asks for a human eye.
+RELIABLE_LIKENESS = 0.5
+
+
 def default_faces(candidates: list[Candidate], base_id: str, faces: list[SourceFace], margin: float = 0.02) -> dict[int, str]:
     """For each face, the candidate with its best version — if it beats the base's by `margin`.
 
     The margin stops near-ties swapping faces in for no visible gain; every swap
-    is a seam that could have been avoided.
+    is a seam that could have been avoided. Faces whose best score is below
+    RELIABLE_LIKENESS are left alone for the same reason.
     """
     by_id = {c.id: c for c in candidates if c.ok}
     base = by_id[base_id]
@@ -176,7 +184,7 @@ def default_faces(candidates: list[Candidate], base_id: str, faces: list[SourceF
             key=lambda c: c.scores[face.index],
             default=None,
         )
-        if best is None or best.id == base_id:
+        if best is None or best.id == base_id or best.scores[face.index] < RELIABLE_LIKENESS:
             continue
         if base_score is None or best.scores[face.index] - base_score >= margin:
             choices[face.index] = best.id

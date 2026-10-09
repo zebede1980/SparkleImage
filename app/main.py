@@ -24,22 +24,24 @@ def main() -> None:
     config = get_config()
     runtime = get_runtime()
 
-    log.info("Edit model: %s", config.image.edit_model)
-    log.info("Upscale model: %s", config.image.upscale_model)
-    log.info("Face detector: %s", runtime.face_backend)
-    if not config.image.api_key:
-        log.warning("No API key configured — set one in the Settings tab before restoring anything.")
+    log.info("Local GPU: %s", config.comfy.url or "not configured")
+    log.info("Face detector: %s; identity scoring: %s", runtime.face_backend,
+             "on" if runtime.worker.scorer.available else "OFF — ArcFace model missing, faces won't be compared")
+    if not config.comfy.url and not config.image.api_key:
+        log.warning("Neither a local GPU nor a cloud API key is configured — set one in Settings.")
     if not config.auth_tuple:
         log.warning(
             "No UI authentication configured. Set SPARKLE_UI__AUTH_USERNAME and "
             "SPARKLE_UI__AUTH_PASSWORD before exposing this to the internet."
         )
 
+    runtime.start()
     create_app().launch(
         server_name=config.ui.server_name,
         server_port=config.ui.server_port,
         share=config.ui.share,
         auth=config.auth_tuple,
+        allowed_paths=[str(runtime.jobs.root.resolve())],
     )
 
 

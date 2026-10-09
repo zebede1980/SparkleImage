@@ -5,7 +5,14 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from app.core.faces import DETECT_LONG_EDGE, FaceBox, FaceDetector
+from app.core.faces import DETECT_LONG_EDGES, MAX_UPSCALE, FaceBox, FaceDetector, merge_duplicates
+
+
+def test_merge_keeps_the_most_confident_of_overlapping_boxes_and_all_separate_ones():
+    a = FaceBox(100, 100, 50, 50, 0.7)
+    a_better = FaceBox(105, 102, 50, 50, 0.9)
+    b = FaceBox(400, 100, 50, 50, 0.6)
+    assert merge_duplicates([a, b, a_better]) == [a_better, b]
 from tests.conftest import make_photo
 
 
@@ -79,11 +86,12 @@ class TestDetectionSize:
                             ((width / 2, height / 2),) * 5)]
 
     @pytest.mark.parametrize("size", [(300, 200), (6000, 4000)])
-    def test_small_and_huge_images_are_resized_for_detection_and_mapped_back(self, size):
+    def test_detection_runs_at_several_sizes_and_merges_to_one_box_per_face(self, size):
         detector = self.Recorder()
         faces = detector.detect(Image.new("RGB", size, (128, 128, 128)))
-        expected_scale = min(4.0, max(0.25, DETECT_LONG_EDGE / max(size)))  # small: 4x cap; huge: down to 2400
-        assert max(detector.seen[0]) == pytest.approx(max(size) * expected_scale, abs=2)
+        expected = sorted({round(max(size) * min(MAX_UPSCALE, edge / max(size))) for edge in DETECT_LONG_EDGES})
+        assert sorted(max(s) for s in detector.seen) == pytest.approx(expected, abs=2)
+        assert len(faces) == 1  # the same face found at every size is one face
         face = faces[0]
         assert face.x == pytest.approx(size[0] // 4, abs=4)
         assert face.width == pytest.approx(size[0] // 2, abs=4)

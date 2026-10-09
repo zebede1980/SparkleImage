@@ -8,17 +8,22 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Any, Optional
 
 from PIL import Image
 
 from app.clients.catalog import ImageModel, fetch_image_models
+from app.clients.comfy import ComfyClient
 from app.clients.image_api import ImageAPIClient
 from app.config.manager import get_config, get_config_manager
 from app.config.models import AppConfig
+from app.core.engines import CloudEngine, LocalEngine
 from app.core.faces import FaceDetector
 from app.core.gallery import save_result
-from app.core.operations import RESTORE_CHAIN, Operation, get_operation
+from app.core.identity import IdentityScorer
+from app.core.jobs import Engines, JobOptions, JobStore, Worker
+from app.core.operations import Operation, get_operation
 from app.core.pipeline import RunResult, run_operation
 
 logger = logging.getLogger(__name__)
@@ -27,12 +32,48 @@ CATALOGUE_TTL_SECONDS = 3600
 
 
 class Runtime:
-    """Holds the catalogue and runs work against it."""
+    """Holds the catalogue and the job worker, and runs work against them."""
 
-    def __init__(self) -> None:
+    def __init__(self, jobs_root: Path = Path("data/jobs")) -> None:
         self._models: dict[str, ImageModel] = {}
         self._fetched_at: float = 0.0
         self._detector = FaceDetector()
+        self.jobs = JobStore(jobs_root)
+        self.worker = Worker(self.jobs, self.engines_for, IdentityScorer(self._detector))
+
+    def start(self) -> None:
+        self.worker.start()
+
+    async def engines_for(self, options: JobOptions) -> Engines:
+        """Fresh clients for one job, built inside the worker's event loop."""
+        config = self.config
+        comfy = ComfyClient(config.comfy.url, config.comfy.api_key, run_timeout=config.comfy.run_timeout) if config.comfy.url else None
+        local = LocalEngine(comfy, config.comfy.edit_megapixels) if comfy else None
+
+        api: Optional[ImageAPIClient] = None
+        cloud = []
+        if options.cloud_models:
+            await self.ensure_models()
+            api = self._client()
+            cloud = [CloudEngine(api, self._models[m]) for m in options.cloud_models if m in self._models]
+
+        if local is None and not cloud:
+            raise RuntimeError("Nothing to restore with: set the local GPU's URL in Settings, or pick a cloud model")
+
+        async def close() -> None:
+            if comfy:
+                await comfy.close()
+            if api:
+                await api.close()
+
+        return Engines(local, cloud, config.comfy.upscale_short_edge, config.restore.face_swap_margin, close)
+
+    async def local_gpu_status(self) -> str:
+        config = self.config.comfy
+        if not config.url:
+            return "Local GPU: not configured"
+        async with ComfyClient(config.url, config.api_key) as client:
+            return "Local GPU: online" if await client.available() else "Local GPU: **offline** — is the PC on and ComfyUI running?"
 
     @property
     def config(self) -> AppConfig:
@@ -144,39 +185,6 @@ class Runtime:
             )
             result.note(f"Saved as {path.name}")
         return result
-
-    async def restore_chain(
-        self,
-        image: Image.Image,
-        steps: Optional[list[str]] = None,
-        params: Optional[dict[str, dict[str, Any]]] = None,
-        on_step: Optional[Any] = None,
-    ) -> tuple[Image.Image, list[RunResult]]:
-        """Run several operations in sequence, each on the previous output.
-
-        The order in RESTORE_CHAIN is deliberate: physical damage is cleaned
-        before a model is asked to interpret colour, and enlargement happens
-        last so the upscaler works on a repaired photograph rather than
-        magnifying its defects.
-        """
-        steps = list(steps or RESTORE_CHAIN)
-        params = params or {}
-        current = image
-        results: list[RunResult] = []
-
-        for index, step in enumerate(steps, start=1):
-            if on_step:
-                on_step(index, len(steps), get_operation(step))
-            # Intermediates are not saved to the gallery — only the finished photo.
-            result = await self.run(step, current, params.get(step), save=False)
-            results.append(result)
-            if result.success:
-                current = result.image
-            # A failed step is reported and skipped; the chain keeps going with
-            # the last good image rather than abandoning the whole restoration.
-
-        return current, results
-
 
 _runtime: Optional[Runtime] = None
 

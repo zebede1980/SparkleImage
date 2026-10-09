@@ -21,6 +21,7 @@ re-run skips candidates already on disk, so no GPU time is spent twice.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import threading
@@ -28,7 +29,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Literal, Optional
+from typing import Awaitable, Callable, Literal, Optional, Union
 
 from PIL import Image
 
@@ -163,6 +164,11 @@ class Engines:
     cloud: list[Engine]
     short_edge: int
     face_margin: float
+    close: Callable[[], Awaitable[None]] = field(default=lambda: _nothing())
+
+
+async def _nothing() -> None:
+    return None
 
 
 class Worker:
@@ -172,7 +178,7 @@ class Worker:
     thread-safe and returns immediately.
     """
 
-    def __init__(self, store: JobStore, engines: Callable[[JobOptions], Engines],
+    def __init__(self, store: JobStore, engines: Callable[[JobOptions], Union[Engines, Awaitable[Engines]]],
                  scorer: Optional[IdentityScorer] = None) -> None:
         self.store = store
         self.engines = engines
@@ -250,10 +256,12 @@ class Worker:
 
     async def process(self, job_id: str) -> None:
         job = self.store.load(job_id)
-        job.status = "running"
+        job.status, job.error = "running", ""
         self.store.save(job)
+        engines: Optional[Engines] = None
         try:
-            engines = self.engines(job.options)
+            made = self.engines(job.options)
+            engines = await made if inspect.isawaitable(made) else made
             if job.action == "restore":
                 await self._restore(job, engines)
             await self._finish(job, engines)
@@ -263,6 +271,9 @@ class Worker:
             logger.exception("Job %s failed", job_id)
             job.status, job.error, job.stage = "failed", str(exc), "Failed"
             self._note(job, f"failed: {exc}")
+        finally:
+            if engines is not None:
+                await engines.close()
 
     async def _restore(self, job: Job, engines: Engines) -> None:
         source = self.store.source(job)

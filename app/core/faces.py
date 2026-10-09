@@ -33,10 +33,15 @@ YUNET_SEARCH_PATHS = (
     Path("/app/data/models") / YUNET_FILENAME,
 )
 
-# YuNet works on the image at whatever size it's given. Faces in an old group
-# photo are often under 60px — below what it reliably finds — while a 20MP scan
-# is needlessly slow. Detection runs on a copy scaled to roughly this long edge.
-DETECT_LONG_EDGE = 2400
+# YuNet works on the image at whatever size it's given, and no one size suits
+# every photo. Faces in a group shot are often under 60px — too small unless
+# enlarged — yet on a 1930s wedding print YuNet found 8 faces at 1200px, 6 at
+# 1600px and none at 2400px: at high resolution the paper's grain swamps it.
+# So detection runs at several sizes and the results are merged.
+DETECT_LONG_EDGES = (1200, 1800, 2400)
+DETECT_LONG_EDGE = DETECT_LONG_EDGES[-1]
+MAX_UPSCALE = 4.0
+SAME_FACE_IOU = 0.3
 
 Landmarks = tuple[tuple[float, float], ...]
 
@@ -71,6 +76,22 @@ class FaceBox:
             self.confidence,
             marks,
         )
+
+
+def _iou(a: FaceBox, b: FaceBox) -> float:
+    left, top = max(a.x, b.x), max(a.y, b.y)
+    right, bottom = min(a.x + a.width, b.x + b.width), min(a.y + a.height, b.y + b.height)
+    overlap = max(0, right - left) * max(0, bottom - top)
+    return overlap / float(a.area + b.area - overlap) if overlap else 0.0
+
+
+def merge_duplicates(faces: list[FaceBox]) -> list[FaceBox]:
+    """One box per face: where detections overlap, keep the most confident."""
+    kept: list[FaceBox] = []
+    for face in sorted(faces, key=lambda f: f.confidence, reverse=True):
+        if all(_iou(face, k) < SAME_FACE_IOU for k in kept):
+            kept.append(face)
+    return kept
 
 
 def _find_yunet() -> Optional[Path]:
@@ -123,9 +144,7 @@ class FaceDetector:
         found = self._cascade.detectMultiScale(grey, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
         return [FaceBox(int(x), int(y), int(w), int(h), 1.0) for x, y, w, h in found]
 
-    def _detect_array(self, image: Image.Image) -> list[FaceBox]:
-        rgb = image.convert("RGB")
-        scale = min(4.0, max(0.25, DETECT_LONG_EDGE / max(rgb.size)))
+    def _detect_at(self, rgb: Image.Image, scale: float) -> list[FaceBox]:
         if abs(scale - 1.0) > 0.05:
             resample = Image.BICUBIC if scale > 1 else Image.LANCZOS
             rgb = rgb.resize((max(1, round(rgb.width * scale)), max(1, round(rgb.height * scale))), resample)
@@ -134,6 +153,14 @@ class FaceDetector:
         bgr = cv2.cvtColor(np.array(rgb), cv2.COLOR_RGB2BGR)
         faces = self._detect_yunet(bgr) if self._yunet_path else self._detect_cascade(bgr)
         return [f.scaled(1 / scale, 1 / scale) for f in faces] if scale != 1.0 else faces
+
+    def _detect_array(self, image: Image.Image) -> list[FaceBox]:
+        rgb = image.convert("RGB")
+        scales = sorted({round(min(MAX_UPSCALE, edge / max(rgb.size)), 3) for edge in DETECT_LONG_EDGES})
+        found: list[FaceBox] = []
+        for scale in scales:
+            found.extend(self._detect_at(rgb, scale))
+        return merge_duplicates(found)
 
     def detect(self, image: Image.Image) -> list[FaceBox]:
         """Find faces, largest first.
