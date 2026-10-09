@@ -17,6 +17,19 @@ from app.clients.comfy import ComfyClient
 from app.clients.image_api import ImageAPIClient
 
 
+# The edit model works at ~1.5MP; a 20MP scan would only be shrunk again on the
+# PC after a slow trip through the gateway. Comfortably above the working size.
+UPLOAD_MEGAPIXELS = 4.0
+
+
+def _capped(image: Image.Image, megapixels: float) -> Image.Image:
+    pixels = image.width * image.height
+    if pixels <= megapixels * 1e6:
+        return image
+    scale = (megapixels * 1e6 / pixels) ** 0.5
+    return image.resize((round(image.width * scale), round(image.height * scale)), Image.LANCZOS)
+
+
 class Engine(Protocol):
     name: str
     is_local: bool
@@ -39,7 +52,7 @@ class LocalEngine:
     async def _upload(self, image: Image.Image) -> str:
         # Seeds of the same photo share one upload rather than re-sending it each time.
         if self._last_upload is None or self._last_upload[0] is not image:
-            self._last_upload = (image, await self.client.upload(image))
+            self._last_upload = (image, await self.client.upload(_capped(image, UPLOAD_MEGAPIXELS)))
         return self._last_upload[1]
 
     async def edit(self, image: Image.Image, instruction: str, seed: int) -> Image.Image:
