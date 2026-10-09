@@ -46,6 +46,14 @@ def test_face_options_offer_the_base_first_then_scored_alternatives(job_with_can
     assert ("local-s1 (0.85)", "local-s1") in options
 
 
+def test_face_options_follow_an_unapplied_base_change(job_with_candidates):
+    _, job = job_with_candidates
+    options = views.face_options(job, 0, base_id="local-s1")
+    assert options[0] == ("Base's face (local-s1, 0.85)", "")
+    assert ("local-s2 (0.80)", "local-s2") in options
+    assert all(v != "local-s1" for _, v in options[1:])
+
+
 def test_previews_are_cached_and_phone_sized(job_with_candidates):
     store, job = job_with_candidates
     big = store.dir(job.id) / "restored.png"

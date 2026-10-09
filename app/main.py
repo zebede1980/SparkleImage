@@ -1,7 +1,12 @@
 """Main entry point for SparkleImage."""
 
 import logging
+import os
 import sys
+
+# Gradio reports usage to Hugging Face by default. A private photo app has no
+# business phoning home; must be set before gradio is imported.
+os.environ.setdefault("GRADIO_ANALYTICS_ENABLED", "False")
 
 from app.config.manager import get_config
 from app.core.runtime import get_runtime

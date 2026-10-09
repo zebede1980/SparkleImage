@@ -269,6 +269,24 @@ def create_app() -> gr.Blocks:
 
         timer.tick(_tick, inputs=[job_list, which, seen], outputs=[job_list, *job_outputs])
 
+        def _base_changed(job_id, base_value, *picks):
+            # Face options are "every candidate but the base", so a new base
+            # changes them. A pick of the new base itself means "keep the base's".
+            if not job_id or not base_value:
+                return [gr.skip()] * MAX_FACES
+            job = store.load(job_id)
+            updates = []
+            for i, pick in enumerate(picks):
+                if not any(f["index"] == i for f in job.faces):
+                    updates.append(gr.skip())
+                    continue
+                options = views.face_options(job, i, base_value)
+                value = pick if pick in {v for _, v in options} else ""
+                updates.append(gr.Dropdown(choices=options, value=value))
+            return updates
+
+        base_choice.input(_base_changed, inputs=[job_list, base_choice, *face_choices], outputs=face_choices)
+
         def _apply(job_id, base_value, *picks):
             if not job_id:
                 return gr.skip()
@@ -295,6 +313,9 @@ def create_app() -> gr.Blocks:
                 return f"Local GPU: {exc}"
 
         app.load(_gpu_status, outputs=gpu_status)
+        # Choices built at startup are stale for every later page load; Gradio
+        # validates a picked job against the session's own list, so set it now.
+        app.load(lambda: gr.Radio(choices=job_choices()), outputs=job_list)
         test_gpu.click(_gpu_status, outputs=gpu_status)
 
         async def _run_mask(value, description):

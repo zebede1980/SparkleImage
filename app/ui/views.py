@@ -89,13 +89,18 @@ def candidate_gallery(store: JobStore, job: Job) -> list[tuple[str, str]]:
     return items
 
 
-def face_options(job: Job, index: int) -> list[tuple[str, str]]:
-    """Dropdown choices for one face: keep the base's, or take it from a candidate."""
-    base = next((c for c in job.candidates if c["id"] == job.base), None)
+def face_options(job: Job, index: int, base_id: Optional[str] = None) -> list[tuple[str, str]]:
+    """Dropdown choices for one face: keep the base's, or take it from a candidate.
+
+    `base_id` overrides the job's saved base, for when the user has picked a new
+    base in the UI but not applied it yet.
+    """
+    base_id = base_id or job.base
+    base = next((c for c in job.candidates if c["id"] == base_id), None)
     base_score = base["scores"][index] if base and index < len(base["scores"]) else None
-    options = [(f"Base's face ({job.base}{f', {base_score:.2f}' if base_score is not None else ''})", "")]
+    options = [(f"Base's face ({base_id}{f', {base_score:.2f}' if base_score is not None else ''})", "")]
     for c in job.candidates:
-        if c["id"] == job.base or index >= len(c.get("scores", [])) or c["scores"][index] is None:
+        if c["id"] == base_id or index >= len(c.get("scores", [])) or c["scores"][index] is None:
             continue
         options.append((f"{c['id']} ({c['scores'][index]:.2f})", c["id"]))
     return options
